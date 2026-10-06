@@ -10,8 +10,16 @@
     "model-context-protocol",
     "playwright"
   ],
+  "homepage": "https://github.com/shbernal/anki-web-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/shbernal/anki-web-mcp/issues"
+  },
   "license": "MIT",
   "author": "shbernal <shbernal.01@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shbernal/anki-web-mcp.git"
+  },
   "bin": {
     "anki-web-mcp": "dist/cli.js"
   },

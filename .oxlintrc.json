@@ -10,8 +10,6 @@
   },
   "ignorePatterns": ["dist/", "node_modules/", "coverage/", "**/*.d.ts"],
   "rules": {
-    // Conventions shared with the three sibling packages. Each is a decision
-    // they already made and this one holds to.
     "typescript/consistent-type-imports": [
       "warn",
       { "prefer": "type-imports", "fixStyle": "inline-type-imports" }
@@ -53,7 +51,7 @@
     "import/no-named-export": "off",
     "import/prefer-default-export": "off",
 
-    // Top-level helpers are `function` declarations, as in `pdfanki`, so a
+    // Top-level helpers are `function` declarations, so a
     // module reads in the order it tells its story rather than the order a
     // `const` would force. Callbacks stay arrows.
     "func-style": ["error", "declaration", { "allowArrowFunctions": true }],
