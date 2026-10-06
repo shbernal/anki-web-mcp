@@ -285,7 +285,7 @@ export class SharedDecks {
     const response = await fetchAnkiWeb(
       this.#fetch,
       url,
-      cookie === undefined ? undefined : { cookie },
+      cookie === undefined ? {} : { headers: { cookie } },
     );
     if (!response.ok || response.body === null) {
       throw new AnkiWebHttpError(response.status, await response.text(), url);

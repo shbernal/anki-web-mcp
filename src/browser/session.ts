@@ -1,10 +1,12 @@
 import type { BrowserContext } from "playwright";
 
 import { checkLoggedIn } from "../ankiweb/account.js";
+import type { Fetch } from "../ankiweb/response-cache.js";
 import { type DataDir, ensureDataDir } from "../data-dir.js";
 import { AuthRequiredError } from "./auth-required-error.js";
 import {
   authCookies,
+  checkStoredSession,
   hasSessionCookie,
   readStoredSession,
   sessionCookieHeader,
@@ -35,6 +37,8 @@ export interface SessionOptions {
    * try. Rejects with the reason nothing was imported.
    */
   readonly autoImport?: ((adopt: AdoptCookies) => Promise<unknown>) | undefined;
+  /** Sends `checkSignedIn`'s request when there is no browser to send it; replaced in tests. */
+  readonly fetch?: Fetch;
   /** Who the profile lock names while the browser is open; `server` by default. */
   readonly holder?: ProfileHolder;
 }
@@ -112,6 +116,21 @@ export class BrowserSession {
 
   isAuthenticated(): Promise<boolean> {
     return this.use((context) => this.#isAuthenticated(context));
+  }
+
+  /**
+   * Whether the session is signed in, without launching a browser when the
+   * stored cookie can answer. A browser already open is asked as usual. A
+   * stored cookie that AnkiWeb turns down is not the last word, since the
+   * profile may hold a newer one, so the browser is asked then too.
+   */
+  async checkSignedIn(): Promise<boolean> {
+    const signedIn = await this.#exclusive(() =>
+      this.#context === undefined
+        ? checkStoredSession(this.#options.dataDir.cookies, this.#options.fetch ?? fetch)
+        : Promise.resolve(false),
+    );
+    return signedIn || this.isAuthenticated();
   }
 
   /**

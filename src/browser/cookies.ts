@@ -3,6 +3,8 @@ import { readFile, rename, writeFile } from "node:fs/promises";
 import type { Cookie } from "playwright";
 import { z } from "zod";
 
+import { checkLoggedInOverHttp } from "../ankiweb/account.js";
+import type { Fetch } from "../ankiweb/response-cache.js";
 import { unlessMissing } from "../data-dir.js";
 
 const PRIVATE_FILE_MODE = 0o600;
@@ -90,4 +92,21 @@ export async function writeStoredSession(path: string, session: StoredSession): 
     mode: PRIVATE_FILE_MODE,
   });
   await rename(temporary, path);
+}
+
+/**
+ * Asks AnkiWeb, over plain `fetch`, whether the cookie stored at `path` is
+ * still signed in, and records when it last said yes.
+ */
+export async function checkStoredSession(path: string, fetcher: Fetch): Promise<boolean> {
+  const stored = await readStoredSession(path);
+  const header = stored === undefined ? undefined : sessionCookieHeader(stored.cookies);
+  if (stored === undefined || header === undefined) {
+    return false;
+  }
+  if (!(await checkLoggedInOverHttp(fetcher, header))) {
+    return false;
+  }
+  await writeStoredSession(path, { ...stored, validatedAt: new Date().toISOString() });
+  return true;
 }

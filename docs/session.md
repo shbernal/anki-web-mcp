@@ -145,8 +145,12 @@ throwaway server instances to answer `server/discover` probes.
 
 `server_status` reports `version`, `dataDir`, `sessionStored` (whether
 `cookies.json` holds the session cookie) and `lastValidated`. With
-`validate: true` it also starts the browser, checks the session against AnkiWeb
-and adds `authenticated`.
+`validate: true` it also checks the session against AnkiWeb and adds
+`authenticated`. When no browser is open, that is the same `get-account-status`
+POST sent over `fetch` with the stored `ankiweb` cookie, which costs one request
+and no Chromium; a yes refreshes `validatedAt`. A browser already open is asked
+instead. A stored cookie that is missing or turned down falls back to launching
+the browser, since the profile may hold a newer one.
 
 `list_my_decks` posts `deck-list-info` the same way, after the same session
 check, and flattens the tree so each parent comes before its subdecks. Each

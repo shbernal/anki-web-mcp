@@ -17,12 +17,14 @@ export function registerServerStatus(
     {
       title: "Server status",
       description:
-        "Report the server version, the data directory, and whether an AnkiWeb session is stored. With `validate`, also start the browser and ask AnkiWeb whether that session is still signed in.",
+        "Report the server version, the data directory, and whether an AnkiWeb session is stored. With `validate`, also ask AnkiWeb whether that session is still signed in.",
       inputSchema: z.object({
         validate: z
           .boolean()
           .optional()
-          .describe("Check the session against AnkiWeb. Starts a headless browser."),
+          .describe(
+            "Check the session against AnkiWeb. Starts a headless browser only when the stored cookie is missing or turned down.",
+          ),
       }),
       outputSchema: z.object({
         version: z.string(),
@@ -37,7 +39,7 @@ export function registerServerStatus(
       const stored = (await checkDataDir(dataDir.root))
         ? await readStoredSession(dataDir.cookies)
         : undefined;
-      const authenticated = validate === true ? await session.isAuthenticated() : undefined;
+      const authenticated = validate === true ? await session.checkSignedIn() : undefined;
       // A validation that just succeeded rewrote the file, so read it again.
       const latest = authenticated === true ? await readStoredSession(dataDir.cookies) : stored;
       const lastValidated = latest?.validatedAt;

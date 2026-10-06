@@ -2,6 +2,7 @@ import type { APIRequestContext } from "playwright";
 
 import { AnkiWebHttpError } from "./http-error.js";
 import { decodeMessage, readBool } from "./protobuf.js";
+import { type Fetch, fetchAnkiWeb } from "./response-cache.js";
 import { ankiWebThrottle } from "./throttle.js";
 import { ACCOUNT_STATUS_URL } from "./urls.js";
 
@@ -35,4 +36,23 @@ export async function checkLoggedIn(request: APIRequestContext): Promise<boolean
     throw new AnkiWebHttpError(response.status(), await response.text(), ACCOUNT_STATUS_URL);
   }
   return decodeLoggedIn(await response.body());
+}
+
+/**
+ * The same question as `checkLoggedIn`, asked over plain `fetch` with a
+ * `Cookie` header, so it needs no browser.
+ */
+export async function checkLoggedInOverHttp(fetcher: Fetch, cookie: string): Promise<boolean> {
+  const response = await fetchAnkiWeb(fetcher, ACCOUNT_STATUS_URL, {
+    method: "POST",
+    headers: { "content-type": "application/octet-stream", cookie },
+    body: new Uint8Array(),
+  });
+  if (response.status === HTTP_FORBIDDEN) {
+    return false;
+  }
+  if (!response.ok) {
+    throw new AnkiWebHttpError(response.status, await response.text(), ACCOUNT_STATUS_URL);
+  }
+  return decodeLoggedIn(new Uint8Array(await response.arrayBuffer()));
 }

@@ -9,6 +9,9 @@ import type { DataDir } from "../src/data-dir.js";
 import { createServer } from "../src/server.js";
 import { fakeContext, type Respond } from "./fake-context.js";
 
+/** `get-account-status` answering `logged_in = true`. */
+const LOGGED_IN_BODY = Uint8Array.of(0x08, 0x01);
+
 const textContent = z.array(z.object({ text: z.string() }));
 
 /** The text of a tool result's first content block. */
@@ -42,6 +45,7 @@ export async function connectedClient({
     dataDir,
     launch: async () => fake.context,
     checkLoggedIn: async () => loggedIn,
+    fetch: async () => new Response(loggedIn ? LOGGED_IN_BODY : new Uint8Array()),
   });
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: "test", version: "0.0.0" });

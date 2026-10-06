@@ -7,10 +7,11 @@ import { setImmediate } from "node:timers/promises";
 import type { BrowserContext, Cookie } from "playwright";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { Fetch } from "../src/ankiweb/response-cache.js";
 import { AuthRequiredError } from "../src/browser/auth-required-error.js";
 import { readStoredSession, writeStoredSession } from "../src/browser/cookies.js";
 import { BrowserSession, type SessionOptions } from "../src/browser/session.js";
-import { type DataDir, resolveDataDir } from "../src/data-dir.js";
+import { type DataDir, ensureDataDir, resolveDataDir } from "../src/data-dir.js";
 import { type FakeContext, fakeContext } from "./fake-context.js";
 
 const SESSION_COOKIE = {
@@ -192,5 +193,60 @@ describe("adopting imported cookies", () => {
     await expect(call).rejects.toThrow(/holds a live AnkiWeb session.*--login/u);
     await browser.useAuthenticated(async () => "unreachable").catch(() => "refused");
     expect(autoImport).toHaveBeenCalledOnce();
+  });
+});
+
+/** Answers `get-account-status` and records the cookie each request carried. */
+function accountStatus(loggedIn: boolean): { fetch: Fetch; cookies: (string | undefined)[] } {
+  const cookies: (string | undefined)[] = [];
+  return {
+    cookies,
+    fetch: async (_url, init) => {
+      cookies.push(init?.headers?.cookie);
+      return new Response(loggedIn ? Uint8Array.of(0x08, 0x01) : new Uint8Array());
+    },
+  };
+}
+
+describe("checking the session without a browser", () => {
+  const STORED = { validatedAt: "2026-10-06T12:00:00.000Z", cookies: [SESSION_COOKIE] };
+
+  it("asks with the stored cookie and launches nothing when AnkiWeb says yes", async () => {
+    expect.assertions(4);
+    await ensureDataDir(dataDir);
+    await writeStoredSession(dataDir.cookies, STORED);
+    const status = accountStatus(true);
+    await expect(session(false, { fetch: status.fetch }).checkSignedIn()).resolves.toBe(true);
+    expect(status.cookies).toStrictEqual(["ankiweb=token"]);
+    expect(launches).toBe(0);
+    const stored = await readStoredSession(dataDir.cookies);
+    expect(stored?.validatedAt).not.toBe(STORED.validatedAt);
+  });
+
+  it("asks the browser when AnkiWeb turns the stored cookie down", async () => {
+    expect.assertions(2);
+    await ensureDataDir(dataDir);
+    await writeStoredSession(dataDir.cookies, STORED);
+    const browser = session(true, { fetch: accountStatus(false).fetch });
+    await expect(browser.checkSignedIn()).resolves.toBe(true);
+    expect(launches).toBe(1);
+  });
+
+  it("asks the browser when nothing is stored", async () => {
+    expect.assertions(2);
+    const status = accountStatus(true);
+    await expect(session(false, { fetch: status.fetch }).checkSignedIn()).resolves.toBe(false);
+    expect(status.cookies).toStrictEqual([]);
+  });
+
+  it("asks a browser that is already open rather than sending another request", async () => {
+    expect.assertions(2);
+    await ensureDataDir(dataDir);
+    await writeStoredSession(dataDir.cookies, STORED);
+    const status = accountStatus(true);
+    const browser = session(true, { fetch: status.fetch });
+    await browser.use(touch);
+    await expect(browser.checkSignedIn()).resolves.toBe(true);
+    expect(status.cookies).toStrictEqual([]);
   });
 });

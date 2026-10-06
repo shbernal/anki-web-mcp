@@ -6,10 +6,17 @@ const MS_PER_SECOND = 1000;
 const MAX_ENTRIES = 50;
 const MAX_AGE = /(?:^|,)\s*max-age=(?<seconds>\d+)/u;
 
+/** What a request to AnkiWeb may carry beyond its URL; a GET with no headers by default. */
+export type AnkiWebRequest = Readonly<{
+  method?: "GET" | "POST";
+  headers?: Readonly<Record<string, string>>;
+  body?: Readonly<Uint8Array<ArrayBuffer>>;
+}>;
+
 /** The slice of `fetch` this needs, which a test can stand in for. */
 export type Fetch = (
   url: string,
-  init?: Readonly<{ headers?: Readonly<Record<string, string>>; signal?: AbortSignal }>,
+  init?: AnkiWebRequest & Readonly<{ signal?: AbortSignal }>,
 ) => Promise<Response>;
 
 /**
@@ -20,7 +27,7 @@ export type Fetch = (
 export async function fetchAnkiWeb(
   fetcher: Fetch,
   url: string,
-  headers?: Readonly<Record<string, string>>,
+  request: AnkiWebRequest = {},
 ): Promise<Response> {
   await ankiWebThrottle.wait();
   const controller = new AbortController();
@@ -28,10 +35,7 @@ export async function fetchAnkiWeb(
     controller.abort(new DOMException("AnkiWeb did not answer in time", "TimeoutError"));
   }, REQUEST_TIMEOUT_MS);
   try {
-    return await fetcher(url, {
-      ...(headers === undefined ? {} : { headers }),
-      signal: controller.signal,
-    });
+    return await fetcher(url, { ...request, signal: controller.signal });
   } finally {
     clearTimeout(timer);
   }
