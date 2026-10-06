@@ -25,7 +25,7 @@ export async function postService(
     throw new AuthRequiredError();
   }
   if (!response.ok()) {
-    throw new AnkiWebHttpError(response.status(), await response.text());
+    throw new AnkiWebHttpError(response.status(), await response.text(), url);
   }
   return response.body();
 }

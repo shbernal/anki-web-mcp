@@ -288,7 +288,7 @@ export class SharedDecks {
       cookie === undefined ? undefined : { cookie },
     );
     if (!response.ok || response.body === null) {
-      throw new AnkiWebHttpError(response.status, await response.text());
+      throw new AnkiWebHttpError(response.status, await response.text(), url);
     }
     return {
       deck: { id, title },

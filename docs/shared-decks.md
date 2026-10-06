@@ -30,7 +30,10 @@ dependency.
 AnkiWeb answers `429` after about four searches a minute. Every response that
 carries `max-age` (AnkiWeb sends 600 s) is kept in memory for that long, keyed
 by URL, up to 50 entries. So repeating a search, or paging through one, costs
-one request. A `429` becomes a tool error that tells the caller to wait.
+one request. A `429` becomes a tool error that tells the caller to wait. A
+refused search is worded as the search limit, since its body ("Failed to parse
+input.") says nothing. Any other `429` quotes AnkiWeb's body, which for a
+download is "Please log in to download more decks."
 
 ## Search
 

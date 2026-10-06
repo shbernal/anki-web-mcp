@@ -32,7 +32,7 @@ export async function checkLoggedIn(request: APIRequestContext): Promise<boolean
     return false;
   }
   if (!response.ok()) {
-    throw new AnkiWebHttpError(response.status(), await response.text());
+    throw new AnkiWebHttpError(response.status(), await response.text(), ACCOUNT_STATUS_URL);
   }
   return decodeLoggedIn(await response.body());
 }

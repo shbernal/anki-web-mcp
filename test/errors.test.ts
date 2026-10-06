@@ -25,6 +25,26 @@ describe("describeError", () => {
     );
   });
 
+  it("words a 429 by the request it answered", () => {
+    expect.assertions(3);
+    const search = "https://ankiweb.net/svc/shared/list-decks?search=x";
+    const download = "https://ankiweb.net/svc/shared/download-deck/1?t=k";
+    expect(describeError(new AnkiWebHttpError(429, "Failed to parse input.", search), "t")).toMatch(
+      /four searches a minute/u,
+    );
+    expect(
+      describeError(
+        new AnkiWebHttpError(429, "Please log in to download more decks.", download),
+        "t",
+      ),
+    ).toBe(
+      'AnkiWeb is rate-limiting this address (HTTP 429). It says: "Please log in to download more decks." Wait a few minutes before trying again.',
+    );
+    expect(describeError(new AnkiWebHttpError(429, "", download), "t")).toBe(
+      "AnkiWeb is rate-limiting this address (HTTP 429). Wait a few minutes before trying again.",
+    );
+  });
+
   it("calls an undecodable payload a sign that AnkiWeb changed", () => {
     expect.assertions(1);
     expect(describeError(new ProtobufError("Truncated varint"), "t")).toMatch(

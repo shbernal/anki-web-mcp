@@ -13,8 +13,14 @@ export function sharedDeckPageUrl(id: number): string {
   return `${ANKIWEB_ORIGIN}${SHARED_INFO_PATH}${id}`;
 }
 
+const SHARED_SEARCH_PATH = "/svc/shared/list-decks";
+
 export function sharedSearchUrl(query: string): string {
-  return `${ANKIWEB_ORIGIN}/svc/shared/list-decks?${new URLSearchParams({ search: query })}`;
+  return `${ANKIWEB_ORIGIN}${SHARED_SEARCH_PATH}?${new URLSearchParams({ search: query })}`;
+}
+
+export function isSharedSearchUrl(url: string): boolean {
+  return URL.parse(url)?.pathname === SHARED_SEARCH_PATH;
 }
 
 export function sharedItemInfoUrl(id: number): string {

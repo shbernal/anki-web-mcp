@@ -104,6 +104,21 @@ describe("download_shared_deck", () => {
     await client.close();
   });
 
+  it("quotes AnkiWeb's reason when the signed-in retry is refused too", async () => {
+    expect.assertions(3);
+    const client = await connectedClient({
+      dataDir,
+      sharedDecks: catalogue(() => false),
+      loggedIn: true,
+      cookies: [SESSION_COOKIE],
+    });
+    const result = await client.callTool(DOWNLOAD);
+    expect(result.isError).toBe(true);
+    expect(textOf(result.content)).toMatch(/Please log in to download more decks/u);
+    expect(textOf(result.content)).not.toMatch(/searches/u);
+    await client.close();
+  });
+
   it("refuses a relative directory", async () => {
     expect.assertions(2);
     const client = await connectedClient({ dataDir, sharedDecks: catalogue(() => true) });

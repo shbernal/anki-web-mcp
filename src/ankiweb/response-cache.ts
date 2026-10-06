@@ -69,7 +69,7 @@ export class ResponseCache {
     }
     const response = await fetchAnkiWeb(this.#fetch, url);
     if (!response.ok) {
-      throw new AnkiWebHttpError(response.status, await response.text());
+      throw new AnkiWebHttpError(response.status, await response.text(), url);
     }
     const body = new Uint8Array(await response.arrayBuffer());
     const maxAge = MAX_AGE.exec(response.headers.get("cache-control") ?? "")?.groups?.seconds;
