@@ -2,6 +2,7 @@ import type { APIRequestContext } from "playwright";
 
 import { AuthRequiredError } from "../browser/auth-required-error.js";
 import { AnkiWebHttpError } from "./http-error.js";
+import { ankiWebThrottle } from "./throttle.js";
 
 const HTTP_FORBIDDEN = 403;
 
@@ -15,6 +16,7 @@ export async function postService(
   url: string,
   body: Readonly<Uint8Array> = new Uint8Array(),
 ): Promise<Uint8Array> {
+  await ankiWebThrottle.wait();
   const response = await request.post(url, {
     headers: { "content-type": "application/octet-stream" },
     data: Buffer.from(body),

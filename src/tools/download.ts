@@ -7,6 +7,7 @@ import type { SharedDeckDownload, SharedDecks } from "../ankiweb/shared.js";
 import { AuthRequiredError } from "../browser/auth-required-error.js";
 import type { BrowserSession } from "../browser/session.js";
 import type { DataDir } from "../data-dir.js";
+import { guarded, ToolError } from "../errors.js";
 import { downloadDirectory, sanitizeFilename, saveApkg } from "../save-apkg.js";
 
 const directory = z
@@ -27,7 +28,7 @@ async function signedInCookie(session: BrowserSession): Promise<string> {
     return await session.sessionCookie();
   } catch (error) {
     throw error instanceof AuthRequiredError
-      ? new Error(`${DOWNLOAD_LIMIT} ${error.message}`, { cause: error })
+      ? new ToolError(`${DOWNLOAD_LIMIT} ${error.message}`, { cause: error })
       : error;
   }
 }
@@ -82,7 +83,7 @@ export function registerDownload(
       }),
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
     },
-    async (input) => {
+    guarded("download_shared_deck", async (input) => {
       const id = parseSharedId(input.deck);
       // Checked first, so a bad path costs no request to AnkiWeb.
       const target = await downloadDirectory(input.directory, dataDir);
@@ -102,6 +103,6 @@ export function registerDownload(
         ],
         structuredContent: output,
       };
-    },
+    }),
   );
 }

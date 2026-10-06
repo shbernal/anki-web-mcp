@@ -2,6 +2,7 @@ import { type FileHandle, open, rm, stat } from "node:fs/promises";
 import { extname, isAbsolute, join } from "node:path";
 
 import { type DataDir, ensureDataDir, unlessMissing } from "./data-dir.js";
+import { ToolError } from "./errors.js";
 
 const APKG = ".apkg";
 /** Every `.apkg` is a zip, and a zip opens with a local file header. */
@@ -17,7 +18,7 @@ const WINDOWS_RESERVED = /^(?:con|prn|aux|nul|com\d|lpt\d)$/iu;
 const EDGE_DOTS_AND_SPACES = /^[\s.]+|[\s.]+$/gu;
 const HEAD_PREVIEW = 16;
 
-export class DownloadError extends Error {
+export class DownloadError extends ToolError {
   override name = "DownloadError";
 }
 

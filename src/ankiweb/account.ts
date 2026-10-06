@@ -1,5 +1,7 @@
 import type { APIRequestContext } from "playwright";
 
+import { AnkiWebHttpError } from "./http-error.js";
+import { ankiWebThrottle } from "./throttle.js";
 import { ACCOUNT_STATUS_URL } from "./urls.js";
 
 const HTTP_FORBIDDEN = 403;
@@ -43,6 +45,7 @@ export function decodeLoggedIn(body: Readonly<Uint8Array>): boolean {
  * page render.
  */
 export async function checkLoggedIn(request: APIRequestContext): Promise<boolean> {
+  await ankiWebThrottle.wait();
   const response = await request.post(ACCOUNT_STATUS_URL, {
     headers: { "content-type": "application/octet-stream" },
     data: Buffer.alloc(0),
@@ -51,9 +54,7 @@ export async function checkLoggedIn(request: APIRequestContext): Promise<boolean
     return false;
   }
   if (!response.ok()) {
-    throw new Error(
-      `AnkiWeb answered the session check with ${response.status()}: ${await response.text()}`,
-    );
+    throw new AnkiWebHttpError(response.status(), await response.text());
   }
   return decodeLoggedIn(await response.body());
 }

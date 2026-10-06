@@ -5,7 +5,7 @@ import type { BrowserSession } from "./browser/session.js";
 import type { DataDir } from "./data-dir.js";
 import { registerDownload } from "./tools/download.js";
 import { registerMyDecks } from "./tools/my-decks.js";
-import { registerServerStatus } from "./tools/server-status.js";
+import { registerCloseSession, registerServerStatus } from "./tools/server-status.js";
 import { type PollOptions, registerShare } from "./tools/share.js";
 import { registerSharedDecks } from "./tools/shared.js";
 import { version } from "./version.js";
@@ -31,5 +31,6 @@ export function createServer({
   registerDownload(server, { shared: sharedDecks, session, dataDir });
   registerMyDecks(server, session);
   registerShare(server, session, sharePoll);
+  registerCloseSession(server, session);
   return server;
 }

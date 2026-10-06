@@ -2,6 +2,8 @@ import { mkdir, rm, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 
+import { ToolError } from "./errors.js";
+
 export const DATA_DIR_ENV = "ANKI_WEB_MCP_DATA_DIR";
 
 const PRIVATE_DIR_MODE = 0o700;
@@ -17,7 +19,7 @@ export interface DataDir {
   readonly downloads: string;
 }
 
-export class DataDirError extends Error {
+export class DataDirError extends ToolError {
   override name = "DataDirError";
 }
 

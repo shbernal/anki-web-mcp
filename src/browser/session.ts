@@ -44,6 +44,10 @@ export type AdoptCookies = (cookies: readonly StoredCookie[]) => Promise<boolean
  * context, later calls share it, and it closes after `idleMs` with nothing in
  * flight. It never opens a headed window: a stdio client may have no display,
  * so signing in is left to `--login`.
+ *
+ * Calls take turns: each waits for the one before it to finish, so a session
+ * check, an import or a share never interleaves with another call on the same
+ * cookie jar. A task must not call `use` again, or it waits on itself.
  */
 export class BrowserSession {
   readonly #options: SessionOptions;
@@ -52,6 +56,8 @@ export class BrowserSession {
   #idleTimer: NodeJS.Timeout | undefined;
   #validated: { readonly at: number; readonly loggedIn: boolean } | undefined;
   #imported: Promise<unknown> | undefined;
+  /** Settles when the last call queued so far has finished. */
+  #queue: Promise<void> = Promise.resolve();
 
   constructor(options: SessionOptions) {
     this.#options = options;
@@ -66,7 +72,7 @@ export class BrowserSession {
     this.#active += 1;
     clearTimeout(this.#idleTimer);
     try {
-      return await task(await this.#open());
+      return await this.#exclusive(async () => task(await this.#open()));
     } finally {
       this.#active -= 1;
       this.#armIdleTimer();
@@ -104,6 +110,18 @@ export class BrowserSession {
     return this.use((context) => this.#isAuthenticated(context));
   }
 
+  /**
+   * Closes the browser once the calls ahead of this one have finished, and
+   * resolves to whether one was open. The next call relaunches it.
+   */
+  release(): Promise<boolean> {
+    return this.#exclusive(async () => {
+      const open = this.#context !== undefined;
+      await this.close();
+      return open;
+    });
+  }
+
   async close(): Promise<void> {
     clearTimeout(this.#idleTimer);
     const context = this.#context;
@@ -113,6 +131,13 @@ export class BrowserSession {
       const opened = await context;
       await opened.close();
     }
+  }
+
+  /** Runs `task` after every call queued before it, whether those succeeded or not. */
+  #exclusive<Result>(task: () => Promise<Result>): Promise<Result> {
+    const turn = runAfter(this.#queue, task);
+    this.#queue = settled(turn);
+    return turn;
   }
 
   #armIdleTimer(): void {
@@ -209,6 +234,23 @@ export class BrowserSession {
       await exportSession(context, this.#options.dataDir, new Date(now));
     }
     return loggedIn;
+  }
+}
+
+async function runAfter<Result>(
+  previous: Promise<void>,
+  task: () => Promise<Result>,
+): Promise<Result> {
+  await previous;
+  return task();
+}
+
+/** Resolves once `turn` settles either way. */
+async function settled(turn: Promise<unknown>): Promise<void> {
+  try {
+    await turn;
+  } catch {
+    // The call that queued `turn` gets its error; the next one only waits.
   }
 }
 

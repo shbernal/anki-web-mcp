@@ -1,4 +1,5 @@
 import { AnkiWebHttpError } from "./http-error.js";
+import { ankiWebThrottle, REQUEST_TIMEOUT_MS } from "./throttle.js";
 
 const MS_PER_SECOND = 1000;
 /** Enough for a session's worth of searches; a large result set is about 100 kB. */
@@ -8,8 +9,33 @@ const MAX_AGE = /(?:^|,)\s*max-age=(?<seconds>\d+)/u;
 /** The slice of `fetch` this needs, which a test can stand in for. */
 export type Fetch = (
   url: string,
-  init?: Readonly<{ headers?: Readonly<Record<string, string>> }>,
+  init?: Readonly<{ headers?: Readonly<Record<string, string>>; signal?: AbortSignal }>,
 ) => Promise<Response>;
+
+/**
+ * Sends one request to AnkiWeb, after the throttle's gap, and gives up if the
+ * response headers take longer than `REQUEST_TIMEOUT_MS`. The body is not
+ * covered, since a deck can take minutes to stream.
+ */
+export async function fetchAnkiWeb(
+  fetcher: Fetch,
+  url: string,
+  headers?: Readonly<Record<string, string>>,
+): Promise<Response> {
+  await ankiWebThrottle.wait();
+  const controller = new AbortController();
+  const timer = setTimeout(() => {
+    controller.abort(new DOMException("AnkiWeb did not answer in time", "TimeoutError"));
+  }, REQUEST_TIMEOUT_MS);
+  try {
+    return await fetcher(url, {
+      ...(headers === undefined ? {} : { headers }),
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 export interface ResponseCacheOptions {
   readonly fetch?: Fetch;
@@ -41,7 +67,7 @@ export class ResponseCache {
     if (cached !== undefined && cached.expires > this.#now()) {
       return cached.body;
     }
-    const response = await this.#fetch(url);
+    const response = await fetchAnkiWeb(this.#fetch, url);
     if (!response.ok) {
       throw new AnkiWebHttpError(response.status, await response.text());
     }

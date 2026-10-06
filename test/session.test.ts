@@ -2,6 +2,7 @@ import { once } from "node:events";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { setImmediate } from "node:timers/promises";
 
 import type { BrowserContext, Cookie } from "playwright";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -110,6 +111,45 @@ describe("browser session", () => {
     expect(fake.closed()).toBe(true);
     await browser.use(touch);
     expect(launches).toBe(2);
+  });
+});
+
+describe("taking turns", () => {
+  it("runs one call at a time, in the order they arrived", async () => {
+    expect.assertions(1);
+    const browser = session();
+    const events: string[] = [];
+    const step = (name: string) => async () => {
+      events.push(`${name} start`);
+      await setImmediate();
+      events.push(`${name} end`);
+    };
+    await Promise.all([browser.use(step("a")), browser.use(step("b"))]);
+    expect(events).toStrictEqual(["a start", "a end", "b start", "b end"]);
+  });
+
+  it("lets the next call run after one fails", async () => {
+    expect.assertions(2);
+    const browser = session();
+    const failing = browser.use(async () => {
+      throw new Error("boom");
+    });
+    await expect(failing).rejects.toThrow("boom");
+    await expect(browser.use(async () => "next")).resolves.toBe("next");
+  });
+
+  it("closes on release only after the call in progress", async () => {
+    expect.assertions(3);
+    const browser = session();
+    let closedDuringCall = true;
+    const call = browser.use(async () => {
+      await setImmediate();
+      closedDuringCall = fake.closed();
+    });
+    await expect(browser.release()).resolves.toBe(true);
+    await call;
+    expect(closedDuringCall).toBe(false);
+    await expect(browser.release()).resolves.toBe(false);
   });
 });
 

@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { listMyDecks } from "../ankiweb/decks.js";
 import type { BrowserSession } from "../browser/session.js";
+import { guarded } from "../errors.js";
 
 const deck = z.object({
   id: z.number().int(),
@@ -32,7 +33,7 @@ export function registerMyDecks(server: McpServer, session: BrowserSession): voi
       }),
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
-    async () => {
+    guarded("list_my_decks", async () => {
       const list = await session.useAuthenticated((context) => listMyDecks(context.request));
       const lines = list.decks.map(
         ({ id, name, cardsIncludingSubdecks }) =>
@@ -50,6 +51,6 @@ export function registerMyDecks(server: McpServer, session: BrowserSession): voi
         ],
         structuredContent: list,
       };
-    },
+    }),
   );
 }

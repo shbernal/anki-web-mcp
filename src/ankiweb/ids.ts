@@ -1,3 +1,4 @@
+import { ToolError } from "../errors.js";
 import { ANKIWEB_ORIGIN, SHARED_INFO_PATH } from "./urls.js";
 
 /** Shared ids are protobuf `uint32`. */
@@ -5,7 +6,7 @@ const MAX_SHARED_ID = 0xff_ff_ff_ff;
 const DIGITS = /^\d+$/u;
 const SHARED_INFO_HOSTS = new Set(["ankiweb.net", "www.ankiweb.net"]);
 
-export class InvalidSharedIdError extends Error {
+export class InvalidSharedIdError extends ToolError {
   override name = "InvalidSharedIdError";
 
   constructor(input: string) {

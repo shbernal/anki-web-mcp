@@ -63,6 +63,7 @@ describe("server", () => {
           openWorldHint: true,
         },
       },
+      { name: "close_session" },
     ]);
     await client.close();
   });

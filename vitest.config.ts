@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     include: ["test/**/*.{test,spec}.ts"],
     pool: "threads",
+    setupFiles: ["test/setup.ts"],
     coverage: {
       provider: "v8",
       include: ["src/**/*.ts"],

@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { parseSharedId } from "../ankiweb/ids.js";
 import type { SharedDeckRow, SharedDecks } from "../ankiweb/shared.js";
+import { guarded } from "../errors.js";
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
@@ -114,7 +115,7 @@ function registerSearch(server: McpServer, shared: SharedDecks): void {
       }),
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
-    async (input) => {
+    guarded("search_shared_decks", async (input) => {
       const output = searchPage(await shared.search(input.query), input);
       const { query, total, page, results } = output;
       const first = (page - 1) * input.limit + 1;
@@ -131,7 +132,7 @@ function registerSearch(server: McpServer, shared: SharedDecks): void {
         ],
         structuredContent: output,
       };
-    },
+    }),
   );
 }
 
@@ -156,7 +157,7 @@ function registerGet(server: McpServer, shared: SharedDecks): void {
       outputSchema: detail,
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
-    async ({ deck, reviews }) => {
+    guarded("get_shared_deck", async ({ deck, reviews }) => {
       const { downloadKey, ...full } = await shared.get(parseSharedId(deck));
       // AnkiWeb lists reviews newest first.
       const listing = {
@@ -174,7 +175,7 @@ function registerGet(server: McpServer, shared: SharedDecks): void {
         ],
         structuredContent: listing,
       };
-    },
+    }),
   );
 }
 

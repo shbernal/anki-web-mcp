@@ -119,6 +119,10 @@
           { "from": "lib", "name": "Date" },
           { "from": "lib", "name": "Uint8Array" },
 
+          // A fetch's cancellation handle. Aborting it is its one use, and the
+          // class is the DOM's to declare.
+          { "from": "lib", "name": "AbortSignal" },
+
           // Handles on a live browser. Opening a page, setting a cookie or
           // sending a request through one changes the browser's state, so no
           // use of them is a read, and the classes are Playwright's to declare.

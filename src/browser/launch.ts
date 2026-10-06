@@ -9,6 +9,8 @@ import { dirname, join } from "node:path";
 
 import { type BrowserContext, chromium } from "playwright";
 
+import { ToolError } from "../errors.js";
+
 export interface LaunchOptions {
   readonly profileDir: string;
   readonly downloadsDir: string;
@@ -17,7 +19,7 @@ export interface LaunchOptions {
   readonly channel?: string | undefined;
 }
 
-export class BrowserMissingError extends Error {
+export class BrowserMissingError extends ToolError {
   override name = "BrowserMissingError";
 }
 

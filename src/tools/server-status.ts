@@ -4,6 +4,7 @@ import { z } from "zod";
 import { hasSessionCookie, readStoredSession } from "../browser/cookies.js";
 import type { BrowserSession } from "../browser/session.js";
 import { checkDataDir, type DataDir } from "../data-dir.js";
+import { guarded } from "../errors.js";
 import { version } from "../version.js";
 
 export function registerServerStatus(
@@ -32,7 +33,7 @@ export function registerServerStatus(
       }),
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
-    async ({ validate }) => {
+    guarded("server_status", async ({ validate }) => {
       const stored = (await checkDataDir(dataDir.root))
         ? await readStoredSession(dataDir.cookies)
         : undefined;
@@ -51,6 +52,32 @@ export function registerServerStatus(
         content: [{ type: "text", text: JSON.stringify(status) }],
         structuredContent: status,
       };
+    }),
+  );
+}
+
+export function registerCloseSession(server: McpServer, session: BrowserSession): void {
+  server.registerTool(
+    "close_session",
+    {
+      title: "Close the browser",
+      description:
+        "Close the server's headless browser to free its memory, once any call in progress has finished. The AnkiWeb session stays stored, and the next call that needs the browser starts it again. The browser also closes by itself after five idle minutes.",
+      inputSchema: z.object({}),
+      outputSchema: z.object({ closed: z.boolean().describe("false when no browser was open.") }),
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
     },
+    guarded("close_session", async () => {
+      const closed = await session.release();
+      return {
+        content: [{ type: "text", text: closed ? "Browser closed." : "No browser was open." }],
+        structuredContent: { closed },
+      };
+    }),
   );
 }

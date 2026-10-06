@@ -14,6 +14,7 @@ import {
 } from "../ankiweb/share.js";
 import { sharedDeckPageUrl } from "../ankiweb/urls.js";
 import type { BrowserSession } from "../browser/session.js";
+import { guarded, ToolError } from "../errors.js";
 
 export type { PollOptions } from "../ankiweb/share.js";
 
@@ -91,17 +92,17 @@ export function resolveDeck(decks: readonly MyDeck[], input: string): MyDeck {
   const matches = decks.filter(({ id, name }) => String(id) === wanted || name === wanted);
   const [only] = matches;
   if (only === undefined) {
-    throw new Error(
+    throw new ToolError(
       `No deck on AnkiWeb has the id or name "${wanted}". Decks: ${decks.map(({ id, name }) => `${id} (${name})`).join(", ") || "none"}.`,
     );
   }
   if (matches.length > 1) {
-    throw new Error(
+    throw new ToolError(
       `"${wanted}" matches ${matches.length} decks: ${matches.map(({ id, name }) => `${id} (${name})`).join(", ")}. Name one by its id.`,
     );
   }
   if (only.id === DEFAULT_DECK_ID) {
-    throw new Error(
+    throw new ToolError(
       "AnkiWeb does not share the Default deck. Move its cards into a new deck and share that.",
     );
   }
@@ -131,7 +132,7 @@ async function prepare(request: APIRequestContext, input: ShareInput): Promise<S
   const deck = resolveDeck(decks, input.deck);
   const info = await fetchShareInfo(request, deck.id);
   if (info.sharedId !== undefined) {
-    throw new Error(
+    throw new ToolError(
       `"${deck.name}" is already shared as ${sharedDeckPageUrl(info.sharedId)}. Updating or removing a listing is done on AnkiWeb.`,
     );
   }
@@ -153,7 +154,7 @@ async function publish(
   poll: PollOptions,
 ): Promise<ShareOutput> {
   if (preview.problems.length > 0) {
-    throw new Error(`Nothing was published. ${preview.problems.join(" ")}`);
+    throw new ToolError(`Nothing was published. ${preview.problems.join(" ")}`);
   }
   const { title, description, supportUrl } = preview;
   await submitShare(request, preview.deck.id, {
@@ -172,10 +173,10 @@ async function publish(
     };
   }
   if (result.state === "too_large") {
-    throw new Error(`AnkiWeb refused "${preview.deck.name}": the deck is too large to share.`);
+    throw new ToolError(`AnkiWeb refused "${preview.deck.name}": the deck is too large to share.`);
   }
   if (result.state === "error" || result.state === "success") {
-    throw new Error(
+    throw new ToolError(
       `AnkiWeb could not share "${preview.deck.name}" (share state ${result.state}).`,
     );
   }
@@ -230,7 +231,7 @@ export function registerShare(
         openWorldHint: true,
       },
     },
-    async (input) => {
+    guarded("share_deck", async (input) => {
       const output = await session.useAuthenticated(async ({ request }) => {
         const preview = await prepare(request, input);
         return input.confirm ? publish(request, preview, poll) : preview;
@@ -239,6 +240,6 @@ export function registerShare(
         content: [{ type: "text", text: summary(output) }],
         structuredContent: output,
       };
-    },
+    }),
   );
 }

@@ -1,4 +1,6 @@
-export class AuthRequiredError extends Error {
+import { ToolError } from "../errors.js";
+
+export class AuthRequiredError extends ToolError {
   override name = "AuthRequiredError";
 
   /** `importFailure` is why no session could be brought in from a local browser, when one was tried. */

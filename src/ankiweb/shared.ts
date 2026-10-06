@@ -1,3 +1,4 @@
+import { ToolError } from "../errors.js";
 import { htmlToText } from "./html.js";
 import { AnkiWebHttpError } from "./http-error.js";
 import {
@@ -9,7 +10,12 @@ import {
   readNumber,
   readString,
 } from "./protobuf.js";
-import { type Fetch, ResponseCache, type ResponseCacheOptions } from "./response-cache.js";
+import {
+  type Fetch,
+  fetchAnkiWeb,
+  ResponseCache,
+  type ResponseCacheOptions,
+} from "./response-cache.js";
 import {
   sharedDeckPageUrl,
   sharedDownloadUrl,
@@ -209,7 +215,7 @@ export function decodeItemInfo(id: number, body: Readonly<Uint8Array>): SharedDe
   if (available !== undefined) {
     return decodeAvailable(id, available);
   }
-  throw new Error(
+  throw new ToolError(
     readBool(response, ITEM_INFO.accessDenied)
       ? `AnkiWeb refused access to shared item ${id}`
       : `AnkiWeb has no shared item ${id}`,
@@ -271,12 +277,15 @@ export class SharedDecks {
   async download(id: number, cookie?: string): Promise<SharedDeckDownload> {
     const { kind, title, downloadKey } = await this.get(id);
     if (kind !== "deck" || downloadKey === undefined) {
-      throw new Error(`Shared item ${id} is an add-on, not a deck; install it from inside Anki`);
+      throw new ToolError(
+        `Shared item ${id} is an add-on, not a deck; install it from inside Anki`,
+      );
     }
     const url = sharedDownloadUrl(id, downloadKey);
-    const response = await this.#fetch(
+    const response = await fetchAnkiWeb(
+      this.#fetch,
       url,
-      cookie === undefined ? undefined : { headers: { cookie } },
+      cookie === undefined ? undefined : { cookie },
     );
     if (!response.ok || response.body === null) {
       throw new AnkiWebHttpError(response.status, await response.text());
