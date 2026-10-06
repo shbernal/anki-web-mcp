@@ -275,7 +275,7 @@ int64 deck_id = 5; optional uint32 shared_id = 6; }`. The form is pre-filled
 
 3. **Submit.** Submitting sends `POST /svc/decks/deck-share` with
    `{ Metadata metadata = 1; bool confirm_copyright = 2; }` (empty response),
-   then navigates to `/decks/share/pending`. This step was not run.
+   then navigates to `/decks/share/pending`.
 4. **Wait for the result.** The pending page ("Share Status") polls
    `POST /svc/decks/deck-share-state` (empty request) every 5 s while the state is
    `WAITING` or `IN_PROGRESS`. The response is
@@ -284,3 +284,20 @@ int64 deck_id = 5; optional uint32 shared_id = 6; }`. The form is pre-filled
    and `UNKNOWN_ERROR` also exists. On `SUCCESS`, `shared_id` gives
    `/shared/info/<shared_id>`. With nothing in flight the page reads "No share
    is currently active."
+
+   A share of a one-card deck reached `SUCCESS` about 15 s after the submit. The
+   state kept answering `SUCCESS` with that `shared_id` afterwards.
+
+5. **After the share.**
+   - **Hidden for a day.** The listing page tells its owner: "It will take 24
+     hours for this deck to become visible to the public, so that copyright
+     holders have a chance to check it first." Until then an anonymous
+     `item-info` answers `access_denied`, and a signed-in owner gets the full
+     listing with `just_uploaded` (15) set.
+   - **Sharing again updates it.** The same page says: "This deck was shared
+     from <deck name>. If you'd like to update it, ensure the name in your
+     collection is still the same, and then share it again." `deck-share-info`
+     for that deck then carries the listing's `shared_id`, its metadata as
+     shared, and `share_count` 1.
+   - **Tags are padded.** AnkiWeb stores `test` as `" test "`, in both
+     `deck-share-info` and `item-info`.

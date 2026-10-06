@@ -85,6 +85,9 @@ function ankiWeb({ shareInfo = new Uint8Array(), states = [] }: AnkiWebOptions =
   return { posted, respond };
 }
 
+/** No share in flight: protobuf leaves out a zero state. */
+const NONE = new Uint8Array();
+
 function state(value: number, sharedId?: number): Uint8Array {
   return encodeMessage([
     [1, value],
@@ -166,7 +169,9 @@ describe("share_deck", () => {
 
   it("publishes on confirm and waits for the listing", async () => {
     expect.assertions(3);
-    const { client, posted } = await shareClient({ states: [state(1), state(2), state(3, 42)] });
+    const { client, posted } = await shareClient({
+      states: [NONE, state(1), state(2), state(3, 42)],
+    });
     const result = await client.callTool(share({ confirm: true }));
     expect(result.structuredContent).toMatchObject({
       status: "shared",
@@ -179,9 +184,17 @@ describe("share_deck", () => {
     await client.close();
   });
 
+  it("waits past the outcome a previous share left behind", async () => {
+    expect.assertions(1);
+    const { client } = await shareClient({ states: [state(3, 7), state(3, 7), state(3, 42)] });
+    const result = await client.callTool(share({ confirm: true }));
+    expect(result.structuredContent).toMatchObject({ status: "shared", sharedId: 42 });
+    await client.close();
+  });
+
   it("reports a share still processing as pending", async () => {
     expect.assertions(2);
-    const { posted, respond } = ankiWeb({ states: [state(1)] });
+    const { posted, respond } = ankiWeb({ states: [NONE, state(1)] });
     const client = await connectedClient({
       dataDir,
       sharedDecks: new SharedDecks(),
@@ -207,7 +220,7 @@ describe("share_deck", () => {
 
   it("says when AnkiWeb refuses a deck as too large", async () => {
     expect.assertions(2);
-    const { client } = await shareClient({ states: [state(4)] });
+    const { client } = await shareClient({ states: [NONE, state(4)] });
     const result = await client.callTool(share({ confirm: true }));
     expect(result.isError).toBe(true);
     expect(textOf(result.content)).toMatch(/too large/u);

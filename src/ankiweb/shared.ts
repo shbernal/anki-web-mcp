@@ -217,7 +217,7 @@ export function decodeItemInfo(id: number, body: Readonly<Uint8Array>): SharedDe
   }
   throw new ToolError(
     readBool(response, ITEM_INFO.accessDenied)
-      ? `AnkiWeb refused access to shared item ${id}`
+      ? `AnkiWeb refused access to shared item ${id}. A deck shared in the last 24 hours stays hidden from the public while copyright holders can check it.`
       : `AnkiWeb has no shared item ${id}`,
   );
 }

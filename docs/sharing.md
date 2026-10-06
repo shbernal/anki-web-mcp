@@ -25,7 +25,7 @@ so it needs a session but renders no page.
 2. **Read the form.** `deck-share-info` gives what the form is pre-filled with
    and how many shares the account made in the last seven days. A deck that
    carries a `shared_id` is already shared: the call stops and gives its link.
-   Updating or removing a listing is left to AnkiWeb's own pages.
+   Sharing it again would update that listing, which this tool does not do yet.
 3. **Fill it.** `title`, `description`, `tags` and `supportUrl` override the
    prefill. Tags are a list of words without whitespace, sent space-separated.
 4. **Check it.** Every limit the form enforces becomes a line in `problems`:
@@ -40,11 +40,16 @@ so it needs a session but renders no page.
    `confirm_copyright` set, which is the form's "I declare that the material I
    am sharing is entirely my own work…" checkbox, and the tool description says
    that the call makes that declaration for the user.
-7. **Wait.** `deck-share-state` is polled every five seconds, as the share page
-   does, for up to two minutes. `SUCCESS` returns `status: "shared"` with the
-   listing's id and URL; `TOO_LARGE` and any unknown state are errors. Still
-   processing after two minutes returns `status: "pending"`, which tells the
-   assistant not to share again.
+7. **Wait.** `deck-share-state` keeps the last share's outcome after it
+   finishes, so it is read once before the submit, and that same answer is not
+   taken for this share's. It is then polled every five seconds, as the share
+   page does, for up to two minutes.
+   - `SUCCESS` returns `status: "shared"` with the listing's id and URL, and
+     says AnkiWeb hides a new listing from the public for 24 hours while
+     copyright holders can check it.
+   - `TOO_LARGE` and any unknown state are errors.
+   - Still processing after two minutes returns `status: "pending"`, which
+     tells the assistant not to share again.
 
 The tool is annotated `destructiveHint: false`, `idempotentHint: false` and
 `openWorldHint: true`, and its description tells the assistant to show the

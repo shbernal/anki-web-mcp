@@ -152,21 +152,36 @@ export interface PollOptions {
   readonly timeoutMs: number;
 }
 
+const UNSETTLED: ReadonlySet<ShareStateName> = new Set(["none", "waiting", "in_progress"]);
+
+/** Whether `current` is a new outcome rather than one still pending, or the one read before the submit. */
+function isNewOutcome(current: ShareState, before: ShareState): boolean {
+  return (
+    !UNSETTLED.has(current.state) &&
+    !(current.state === before.state && current.sharedId === before.sharedId)
+  );
+}
+
 /**
- * Polls the share state until it settles or `timeoutMs` passes, and returns
- * the last state seen. Right after a submit, `none` can mean AnkiWeb has not
- * queued the share yet, so it is waited on like `waiting`.
+ * Polls the share state until it settles or `timeoutMs` passes. AnkiWeb keeps
+ * answering with the last share's outcome after it finishes, so `before`, read
+ * just ahead of the submit, is waited past rather than taken for this share's.
+ * Right after a submit, `none` can mean AnkiWeb has not queued the share yet,
+ * so it is waited on like `waiting`. On timeout the result is `waiting`.
  */
 export async function waitForShare(
   request: APIRequestContext,
+  before: ShareState,
   { intervalMs, timeoutMs }: PollOptions,
 ): Promise<ShareState> {
   const deadline = Date.now() + timeoutMs;
   for (;;) {
     const current = await fetchShareState(request);
-    const settled = !["none", "waiting", "in_progress"].includes(current.state);
-    if (settled || Date.now() + intervalMs > deadline) {
+    if (isNewOutcome(current, before)) {
       return current;
+    }
+    if (Date.now() + intervalMs > deadline) {
+      return { state: "waiting" };
     }
     await sleep(intervalMs);
   }

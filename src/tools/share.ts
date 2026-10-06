@@ -5,6 +5,7 @@ import { z } from "zod";
 import { listMyDecks, type MyDeck } from "../ankiweb/decks.js";
 import {
   fetchShareInfo,
+  fetchShareState,
   type PollOptions,
   SHARE_LIMITS,
   type ShareMetadata,
@@ -157,13 +158,14 @@ async function publish(
     throw new ToolError(`Nothing was published. ${preview.problems.join(" ")}`);
   }
   const { title, description, supportUrl } = preview;
+  const before = await fetchShareState(request);
   await submitShare(request, preview.deck.id, {
     title,
     description,
     supportUrl,
     tags: preview.tags.join(" "),
   });
-  const result = await waitForShare(request, poll);
+  const result = await waitForShare(request, before, poll);
   if (result.state === "success" && result.sharedId !== undefined) {
     return {
       ...preview,
@@ -192,7 +194,10 @@ function summary(output: ShareOutput): string {
     `Description:\n${output.description}`,
   ];
   if (output.status === "shared") {
-    return [`Shared publicly as ${output.url}.`, ...listing].join("\n");
+    return [
+      `Shared as ${output.url}. AnkiWeb keeps a new listing hidden from the public for 24 hours, so copyright holders can check it first; until then only its owner, signed in, can open it.`,
+      ...listing,
+    ].join("\n");
   }
   if (output.status === "pending") {
     return [

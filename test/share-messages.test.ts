@@ -45,6 +45,24 @@ describe("share messages", () => {
     });
   });
 
+  it("reads a shared deck's listing back, with its padded tags trimmed", async () => {
+    expect.assertions(1);
+    const body = await readFile(
+      new URL("fixtures/ankiweb/deck-share-info-shared.bin", import.meta.url),
+    );
+    expect(decodeShareInfo(body, 1_791_308_364_616)).toStrictEqual({
+      deckId: 1_791_308_364_616,
+      metadata: {
+        title: "anki-web-mcp test, please ignore",
+        tags: "test",
+        supportUrl: "",
+        description: "A throwaway deck published to test a tool. It will be removed shortly.",
+      },
+      sharedId: 260_296_473,
+      shareCount: 1,
+    });
+  });
+
   it("reads an earlier share's id and the weekly count", () => {
     expect.assertions(2);
     const metadata = encodeMessage([
