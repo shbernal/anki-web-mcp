@@ -133,10 +133,19 @@ Review {
 }
 ```
 
+- **Unknown ids** get `200` and a body holding only `missing = true`.
+- **Reviews** come newest first, and a popular deck has hundreds: one with 401
+  reviews answered 17 kB, and one with 1579 answered 295 kB.
+- **Sample fields** arrive as text with the HTML already stripped, and media
+  rewritten to `[sound:0.mp3]` and `[image:1.jpg]`. Both are served from
+  `/shared/mpreview/<id>/<file>` with no session.
+- **Descriptions** are HTML, in whatever shape the deck was shared with. Recent
+  ones are Markdown rendered to `<p>`, `<a>`, `<ul>`, `<strong>` and `<img>`;
+  old ones are plain text with newlines.
+
 The rendered page has a single `button` named "Download", a `heading` per
 section ("Description", "Sample (from N notes)", "Reviews"), and links to
-`/shared/review/<id>` and `/shared/by-author/<id>`. Sample audio is served from
-`/shared/mpreview/<id>/<n>.mp3`.
+`/shared/review/<id>` and `/shared/by-author/<id>`.
 
 ### Download
 

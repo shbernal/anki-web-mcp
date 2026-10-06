@@ -1,7 +1,6 @@
 import type { APIRequestContext } from "playwright";
 
-export const ANKIWEB_ORIGIN = "https://ankiweb.net";
-export const LOGIN_URL = `${ANKIWEB_ORIGIN}/account/login`;
+import { ACCOUNT_STATUS_URL } from "./urls.js";
 
 const HTTP_FORBIDDEN = 403;
 const WIRE_TYPE_BITS = 3;
@@ -44,7 +43,7 @@ export function decodeLoggedIn(body: Readonly<Uint8Array>): boolean {
  * page render.
  */
 export async function checkLoggedIn(request: APIRequestContext): Promise<boolean> {
-  const response = await request.post(`${ANKIWEB_ORIGIN}/svc/account/get-account-status`, {
+  const response = await request.post(ACCOUNT_STATUS_URL, {
     headers: { "content-type": "application/octet-stream" },
     data: Buffer.alloc(0),
   });

@@ -2,7 +2,8 @@ import { setTimeout as sleep } from "node:timers/promises";
 
 import type { BrowserContext } from "playwright";
 
-import { checkLoggedIn, LOGIN_URL } from "../ankiweb/account.js";
+import { checkLoggedIn } from "../ankiweb/account.js";
+import { LOGIN_URL } from "../ankiweb/urls.js";
 import { type DataDir, ensureDataDir } from "../data-dir.js";
 import { hasSessionCookie, SESSION_URLS } from "./cookies.js";
 import { launchContext } from "./launch.js";

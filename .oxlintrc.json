@@ -15,7 +15,12 @@
       { "prefer": "type-imports", "fixStyle": "inline-type-imports" }
     ],
     "typescript/explicit-function-return-type": "off",
-    "typescript/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+    // `const { secret, ...rest } = value` is how a field is left out of an
+    // object without a cast or a `delete`. The left-out binding is the point.
+    "typescript/no-unused-vars": [
+      "error",
+      { "argsIgnorePattern": "^_", "ignoreRestSiblings": true }
+    ],
     "import/extensions": ["error", "ignorePackages", { "ts": "never" }],
 
     // Node-only package, and `node:` says so at the import rather than in prose.

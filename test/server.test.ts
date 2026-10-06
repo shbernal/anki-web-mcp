@@ -4,20 +4,42 @@ import { join } from "node:path";
 
 import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { z } from "zod";
 
+import { SharedDecks } from "../src/ankiweb/shared.js";
 import { writeStoredSession } from "../src/browser/cookies.js";
 import { BrowserSession } from "../src/browser/session.js";
 import { type DataDir, ensureDataDir, resolveDataDir } from "../src/data-dir.js";
 import { createServer } from "../src/server.js";
 import { version } from "../src/version.js";
 import { fakeContext } from "./fake-context.js";
+import { fakeFetch, fixtureResponse } from "./fake-fetch.js";
 
 const VALIDATED_AT = "2026-10-06T12:00:00.000Z";
 
 let scratch: string;
 let dataDir: DataDir;
 
-async function connectedClient(): Promise<Client> {
+const rating = z.object({ thumbsUp: z.number(), thumbsDown: z.number() });
+const ratedResults = z.object({ results: z.array(rating) });
+const textContent = z.array(z.object({ text: z.string() }));
+
+/** The text of a tool result's first content block. */
+function textOf(content: unknown): string | undefined {
+  return textContent.parse(content)[0]?.text;
+}
+
+/** Answers searches with the recorded `japanese` results and listings with the recorded deck. */
+function recordedSharedDecks(): SharedDecks {
+  const fake = fakeFetch(async (url) =>
+    fixtureResponse(
+      url.includes("list-decks") ? "list-decks-japanese.bin" : "item-info-2183294427.bin",
+    ),
+  );
+  return new SharedDecks({ fetch: fake.fetch });
+}
+
+async function connectedClient(sharedDecks = recordedSharedDecks()): Promise<Client> {
   const fake = fakeContext();
   const session = new BrowserSession({
     dataDir,
@@ -27,7 +49,7 @@ async function connectedClient(): Promise<Client> {
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: "test", version: "0.0.0" });
   await Promise.all([
-    createServer({ dataDir, session }).connect(serverSide),
+    createServer({ dataDir, session, sharedDecks }).connect(serverSide),
     client.connect(clientSide),
   ]);
   return client;
@@ -43,11 +65,15 @@ afterEach(async () => {
 });
 
 describe("server", () => {
-  it("lists server_status", async () => {
+  it("lists its tools", async () => {
     expect.assertions(1);
     const client = await connectedClient();
     const { tools } = await client.listTools();
-    expect(tools).toMatchObject([{ name: "server_status" }]);
+    expect(tools).toMatchObject([
+      { name: "server_status" },
+      { name: "search_shared_decks" },
+      { name: "get_shared_deck" },
+    ]);
     await client.close();
   });
 
@@ -90,6 +116,97 @@ describe("server", () => {
       lastValidated: VALIDATED_AT,
       authenticated: false,
     });
+    await client.close();
+  });
+});
+
+describe("search_shared_decks", () => {
+  it("sorts by rating and pages the results", async () => {
+    expect.assertions(4);
+    const client = await connectedClient();
+    const result = await client.callTool({
+      name: "search_shared_decks",
+      arguments: { query: "japanese", page: 2, limit: 3 },
+    });
+    expect(result.structuredContent).toMatchObject({
+      query: "japanese",
+      total: 1899,
+      page: 2,
+      hasMore: true,
+    });
+    const { results } = ratedResults.parse(result.structuredContent);
+    const ratings = results.map((row) => row.thumbsUp - row.thumbsDown);
+    expect(ratings).toHaveLength(3);
+    expect(ratings).toStrictEqual(ratings.toSorted((left, right) => right - left));
+    expect(textOf(result.content)).toMatch(/^1899 shared decks match "japanese"; showing 4-6\./u);
+    await client.close();
+  });
+
+  it("reports a page past the end as empty", async () => {
+    expect.assertions(1);
+    const client = await connectedClient();
+    const result = await client.callTool({
+      name: "search_shared_decks",
+      arguments: { query: "japanese", page: 100, limit: 100 },
+    });
+    expect(result.structuredContent).toMatchObject({ hasMore: false, results: [] });
+    await client.close();
+  });
+
+  it("returns AnkiWeb's rate limit as a tool error", async () => {
+    expect.assertions(2);
+    const limited = fakeFetch(async () => new Response("Failed to parse input.", { status: 429 }));
+    const client = await connectedClient(new SharedDecks({ fetch: limited.fetch }));
+    const result = await client.callTool({
+      name: "search_shared_decks",
+      arguments: { query: "japanese" },
+    });
+    expect(result.isError).toBe(true);
+    expect(textOf(result.content)).toMatch(/rate-limiting/u);
+    await client.close();
+  });
+});
+
+describe("get_shared_deck", () => {
+  it("takes a link and leaves out the download key", async () => {
+    expect.assertions(3);
+    const client = await connectedClient();
+    const result = await client.callTool({
+      name: "get_shared_deck",
+      arguments: { deck: "https://ankiweb.net/shared/info/2183294427" },
+    });
+    expect(result.isError).not.toBe(true);
+    expect(result.structuredContent).toMatchObject({
+      id: 2_183_294_427,
+      title: "Japanese Basic Hiragana",
+      notes: 46,
+      reviewCount: 401,
+      reviews: { length: 10 },
+    });
+    expect(result.structuredContent).not.toHaveProperty("downloadKey");
+    await client.close();
+  });
+
+  it("includes as many reviews as asked for", async () => {
+    expect.assertions(1);
+    const client = await connectedClient();
+    const result = await client.callTool({
+      name: "get_shared_deck",
+      arguments: { deck: "2183294427", reviews: 0 },
+    });
+    expect(result.structuredContent).toMatchObject({ reviewCount: 401, reviews: [] });
+    await client.close();
+  });
+
+  it("rejects something that is not a shared deck", async () => {
+    expect.assertions(2);
+    const client = await connectedClient();
+    const result = await client.callTool({
+      name: "get_shared_deck",
+      arguments: { deck: "https://ankiweb.net/decks" },
+    });
+    expect(result.isError).toBe(true);
+    expect(textOf(result.content)).toMatch(/neither a shared deck id nor/u);
     await client.close();
   });
 });
