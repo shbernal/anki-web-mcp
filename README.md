@@ -4,6 +4,7 @@
 
 Search, download and share AnkiWeb decks from your assistant, on your own session.
 
+[![npm][npm-badge]][npm]
 [![CI][ci-badge]][ci]
 [![License][license-badge]][license]
 [![Node][node-badge]][node]
@@ -128,8 +129,11 @@ flowchart LR
 - [docs/shared-decks.md](docs/shared-decks.md): search, details, downloads and conversion to Markdown
 - [docs/sharing.md](docs/sharing.md): the share flow and its confirmation
 - [docs/errors.md](docs/errors.md): what a failing tool returns, and request pacing
+- [CONTRIBUTING.md](CONTRIBUTING.md): setup, gates, and what to update when AnkiWeb changes
 - [NOTICE](NOTICE): the browser import is ported from [linkedin-mcp-server](https://github.com/stickerdaniel/linkedin-mcp-server)
 
+[npm]: https://www.npmjs.com/package/anki-web-mcp
+[npm-badge]: https://img.shields.io/npm/v/anki-web-mcp?style=for-the-badge&logo=npm&logoColor=f7768e&labelColor=1a1b26&color=f7768e
 [ci]: https://github.com/shbernal/anki-web-mcp/actions/workflows/ci.yml
 [ci-badge]: https://img.shields.io/github/actions/workflow/status/shbernal/anki-web-mcp/ci.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=9ece6a&label=CI&labelColor=1a1b26&color=9ece6a
 [license]: LICENSE
