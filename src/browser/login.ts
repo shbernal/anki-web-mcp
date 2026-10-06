@@ -3,9 +3,15 @@ import { setTimeout as sleep } from "node:timers/promises";
 import type { BrowserContext } from "playwright";
 
 import { checkLoggedIn } from "../ankiweb/account.js";
+import type { Fetch } from "../ankiweb/response-cache.js";
 import { LOGIN_URL } from "../ankiweb/urls.js";
-import { type DataDir, ensureDataDir, removeSession } from "../data-dir.js";
-import { hasSessionCookie, SESSION_URLS } from "./cookies.js";
+import { checkDataDir, type DataDir, ensureDataDir, removeSession } from "../data-dir.js";
+import {
+  checkStoredSession,
+  hasSessionCookie,
+  readStoredSession,
+  SESSION_URLS,
+} from "./cookies.js";
 import { launchContext } from "./launch.js";
 import { assertProfileFree, lockProfile } from "./profile-lock.js";
 import { exportSession } from "./session.js";
@@ -79,4 +85,25 @@ async function waitForSignIn(
 export async function logout(dataDir: DataDir): Promise<void> {
   await assertProfileFree(dataDir);
   await removeSession(dataDir);
+}
+
+/** What `--status` found: no session on disk, or AnkiWeb's answer for the one there is. */
+export type SessionState = "missing" | "signed-in" | "signed-out";
+
+/**
+ * Asks AnkiWeb about the session in `cookies.json` over plain `fetch`. It opens
+ * no browser and takes no profile lock, so it runs beside a server that has the
+ * profile open, and it never looks at the profile itself.
+ */
+export async function sessionStatus(
+  dataDir: DataDir,
+  fetcher: Fetch = fetch,
+): Promise<SessionState> {
+  const stored = (await checkDataDir(dataDir.root))
+    ? await readStoredSession(dataDir.cookies)
+    : undefined;
+  if (stored === undefined || !hasSessionCookie(stored.cookies)) {
+    return "missing";
+  }
+  return (await checkStoredSession(dataDir.cookies, fetcher)) ? "signed-in" : "signed-out";
 }

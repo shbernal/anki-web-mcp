@@ -5,7 +5,7 @@ import { parseArgs } from "node:util";
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
 
 import { installBrowser } from "./browser/launch.js";
-import { login, logout } from "./browser/login.js";
+import { login, logout, sessionStatus } from "./browser/login.js";
 import { BrowserSession } from "./browser/session.js";
 import { resolveDataDir } from "./data-dir.js";
 import { BROWSER_NAMES, type BrowserName, isBrowserName } from "./import/discovery.js";
@@ -29,10 +29,11 @@ function withImportDefault(args: readonly string[]): readonly string[] {
 
 const USAGE = `Usage: anki-web-mcp [options]
 
-Serves MCP over stdio unless one of the first four options is given.
+Serves MCP over stdio unless one of the first five options is given.
 
   --login                       sign in to AnkiWeb in a visible browser window
   --logout                      delete the stored session, keeping downloads
+  --status                      check the stored session with AnkiWeb; exits 1 if signed out
   --import-from-browser [name]  import the session from a local browser now
   --install-browser             download Playwright's Chromium
   --no-auto-import              never look in local browsers on its own
@@ -71,6 +72,7 @@ function parseCommandLine(args: readonly string[]) {
       options: {
         login: { type: "boolean" },
         logout: { type: "boolean" },
+        status: { type: "boolean" },
         "import-from-browser": { type: "string" },
         "auto-import": { type: "boolean", default: true },
         "install-browser": { type: "boolean" },
@@ -109,6 +111,20 @@ async function importSession(browser: BrowserName | undefined): Promise<void> {
   }
 }
 
+async function reportStatus(): Promise<void> {
+  const state = await sessionStatus(dataDir);
+  if (state === "signed-in") {
+    console.error(`anki-web-mcp: signed in to AnkiWeb; session stored in ${dataDir.root}`);
+    return;
+  }
+  console.error(
+    state === "missing"
+      ? `anki-web-mcp: no session stored in ${dataDir.root}; run --login or --import-from-browser`
+      : "anki-web-mcp: AnkiWeb turned down the stored session; run --login",
+  );
+  process.exitCode = 1;
+}
+
 async function serve(): Promise<void> {
   const session = new BrowserSession({
     dataDir,
@@ -137,6 +153,8 @@ try {
   } else if (values.logout === true) {
     await logout(dataDir);
     console.error(`anki-web-mcp: session removed from ${dataDir.root}`);
+  } else if (values.status === true) {
+    await reportStatus();
   } else if (importFrom === undefined) {
     await serve();
   } else {

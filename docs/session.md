@@ -40,6 +40,14 @@ polls once a second. Once the `ankiweb` cookie exists and
 `get-account-status` reports `logged_in`, it writes `cookies.json` and closes the
 window. It gives up after ten minutes, or as soon as the window is closed.
 
+`anki-web-mcp --status` asks AnkiWeb about the session in `cookies.json` and
+exits 0 when it is signed in, 1 when nothing is stored or AnkiWeb turns it
+down. It sends the same `get-account-status` POST as `server_status` over
+`fetch`, so it opens no browser, takes no profile lock and can run beside the
+server. It never reads `profile/`, which can hold a newer cookie than the file
+after the server's browser has run; `server_status` with `validate: true`
+covers that case.
+
 `anki-web-mcp --logout` deletes `profile/` and `cookies.json` and keeps
 `downloads/`. Each target is checked to be a direct child of the data dir
 before the recursive delete.
