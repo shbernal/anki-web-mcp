@@ -153,53 +153,115 @@ event for it. The response is the `.apkg` itself (`application/octet-stream`,
   `{"op":"sdd","iat":<unix seconds>,"jv":1}`. A key minted a few minutes earlier
   was still accepted; the expiry is unknown.
 
-## Session and the user's decks
+## Session
 
-This part is not yet verified against a signed-in session. Everything below
-comes from the client bundle.
+Observed on a signed-in session.
 
-- **Login:** `POST /svc/account/login` takes `{ string username = 1; string password = 2; }`
-  and returns `{ LoginResponseStatus status = 1; string token = 2; }`, where status
-  0 is `UNKNOWN`, 1 is `AUTHENTICATED` and 2 is `INVALID_USER`. The cookie or
-  cookies it sets, and whether 2FA or a CAPTCHA follows, have not been observed.
-- **Session check:** `POST /svc/account/get-account-status` returns
-  `{ bool logged_in = 1; optional string redirect_to = 2; }`. Without a session,
-  `POST /svc/decks/deck-list-info` returns `403` and the `/decks` page moves to
-  `/account/login`.
-- **Terms gate:** `POST /svc/account/check-terms` returns `{ bool needs_to_confirm = 1; }`.
-- **The user's decks:** `/decks` calls `POST /svc/decks/deck-list-info`
-  (`{ optional int32 minutes_west_of_utc = 1; }`), which returns
-  `{ DeckNode top_node = 1; int64 current_deck_id = 2; uint32 collection_size_bytes = 3; uint64 media_size_bytes = 4; }`.
-  A `DeckNode` holds `deck_id` (int64) 1, `name` 2, `children` 3 (repeated
-  `DeckNode`), `level` 4, `collapsed` 5, `review_count` 6, `learn_count` 7,
-  `new_count` 8, `total_in_deck` 13, `total_including_children` 14 and
-  `filtered` 16. Each deck's share link is `/decks/share/<deck_id>`. The default
-  deck can't be shared: the page says to move its cards into a new deck first.
-- **Decks the user has shared:** `/shared/mine` calls `POST /svc/shared/list-mine`
-  (empty request), which returns `items` 1 (repeated `{ id, title, thumbs_up,
-thumbs_down, mtime, downloads = 6 }`), `reviews` 2 and `expired_decks` 3.
-  Removing one is `POST /svc/shared/remove-item` with `{ uint32 shared_id = 1; }`.
+- **Login:** the `/account/login` form sends `POST /svc/account/login` with
+  `{ string username = 1; string password = 2; }` and gets back
+  `{ LoginResponseStatus status = 1; string token = 2; }`. Status 0 is
+  `UNKNOWN`, 1 is `AUTHENTICATED` and 2 is `INVALID_USER`. The page then passes
+  through `GET https://ankiuser.net/account/ankiuser-login` (`303`), which sets
+  the same cookies on `ankiuser.net`, and lands back on AnkiWeb. Logging in
+  from a fresh browser profile asked for no 2FA, email code or CAPTCHA.
+- **Cookies:** two per domain, on both `ankiweb.net` and `ankiuser.net`.
+  - `ankiweb` is the session: `HttpOnly`, `Secure`, `SameSite=Lax`, a
+    150-character value, and an expiry 400 days out.
+  - `has_auth` is a one-character, script-readable flag.
+- **The smallest set is `ankiweb` on `ankiweb.net` alone.** Injected into a fresh
+  context, it is enough for `deck-list-info` to return `200`. Each of the other
+  three cookies alone gets `403`, as does no cookie at all.
+- **Session check:** `POST /svc/account/get-account-status` (empty request)
+  returns `{ bool logged_in = 1; optional string redirect_to = 2; }`. Any
+  session-only call returns `403` without a valid session; the app reacts by
+  moving to `/account/login`.
+- **Terms gate:** `POST /svc/account/check-terms` (empty request) returns
+  `{ bool needs_to_confirm = 1; }`, which was empty (false) on a fresh account.
+- **Links to `ankiuser.net`:** the navigation's "Add" link goes to
+  `https://ankiuser.net/add`, the host that serves the note editor.
+
+## The user's decks
+
+`/decks` calls `POST /svc/decks/deck-list-info`, with
+`{ optional int32 minutes_west_of_utc = 1; }` and an empty body accepted.
+
+```
+DeckListInfoResponse {
+  DeckNode top_node = 1;          // unnamed root; the decks are its children
+  int64  current_deck_id = 2;
+  uint32 collection_size_bytes = 3;
+  uint64 media_size_bytes = 4;
+}
+DeckNode {
+  int64  deck_id = 1;
+  string name = 2;
+  repeated DeckNode children = 3;
+  uint32 level = 4;               // 1 for top-level decks
+  bool   collapsed = 5;
+  uint32 review_count = 6;
+  uint32 learn_count = 7;
+  uint32 new_count = 8;
+  uint32 total_in_deck = 13;
+  uint32 total_including_children = 14;
+  bool   filtered = 16;
+}
+```
+
+- **Deck ids:** "Default" is deck `1`. A deck created on the web gets its
+  creation time in milliseconds as its id (for example `1791280883007`).
+- **The empty Default deck is hidden:** it is left out of the tree once any
+  other deck exists.
+- **Page layout:** each deck is a `button` with its name, next to an "Actions"
+  `button` whose menu offers "Rename", "Share" and "Delete".
+  - "Share" goes to `/decks/share/<deck_id>`.
+  - "Delete" asks "Delete all cards in deck? This can not be undone." in a
+    native `confirm()` dialog, then sends `POST /svc/decks/remove-deck` with
+    `{ int64 deck_id = 1; }`.
+  - "Create Deck" prompts for a name with `prompt()` and sends
+    `POST /svc/decks/create-deck` with `{ string name = 1; }`.
+  - The default deck can't be shared: the page says to move its cards into a
+    new deck first.
+
+`/shared/mine` ("My Shared Items") calls `POST /svc/shared/list-mine` (empty
+request). It returns `items` 1 (repeated `{ id, title, thumbs_up, thumbs_down,
+mtime, downloads = 6 }`), `reviews` 2 and `expired_decks` 3; the body is empty
+when nothing is shared. The bundle removes a shared item with
+`POST /svc/shared/remove-item` and `{ uint32 shared_id = 1; }`. That page's
+controls for it have not been seen, because the test account had nothing
+shared.
 
 ### Share flow
 
-1. **Load the form.** `/decks/share/<deck_id>` loads
+1. **Load the form.** `/decks/share/<deck_id>` (heading "Share Deck") loads
    `POST /svc/decks/deck-share-info` with `{ int64 deck_id = 1; }`. The response
    is `{ Metadata metadata = 1; bool is_large_user = 2; uint32 share_count = 3; }`,
    where `Metadata` is `{ title = 1; tags = 2; support_url = 3; description = 4;
 int64 deck_id = 5; optional uint32 shared_id = 6; }`. The form is pre-filled
-   from it, and `shared_id` is set when the deck was shared before.
-2. **Fill it in.** The fields are labelled "Title" (max 60, required), "Tags"
-   (max 60, optional, space-separated), "Support Page" (max 180, optional), a
-   description textarea (required), and a copyright confirmation checkbox
-   (required). Submit stays disabled until title and description are non-blank,
-   the box is checked, and `share_count < 20`.
+   from it, and `shared_id` is set when the deck was shared before. For a deck
+   never shared, the response holds only `metadata.deck_id`.
+2. **Fill it in.** Every field is reachable by its label:
+
+   | label                                                                                                                                                     | control                        | limit | required |
+   | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ | ----- | -------- |
+   | Title                                                                                                                                                     | text input                     | 60    | yes      |
+   | Tags                                                                                                                                                      | text input, space-separated    | 60    | no       |
+   | Support Page                                                                                                                                              | text input                     | 180   | no       |
+   | Description                                                                                                                                               | textarea, rendered as Markdown | 65000 | yes      |
+   | I declare that the material I am sharing is entirely my own work, or I have obtained a license from the intellectual property holder(s) to share it here. | checkbox                       |       | yes      |
+
+   The page states the weekly quota as "N/20 shares in last 7 days." The
+   "Share" button stays disabled until title and description are non-blank, the
+   box is checked, and `share_count < 20`. That was checked live: filling both
+   fields left it disabled, and ticking the box enabled it.
+
 3. **Submit.** Submitting sends `POST /svc/decks/deck-share` with
    `{ Metadata metadata = 1; bool confirm_copyright = 2; }` (empty response),
-   then navigates to `/decks/share/pending`.
-4. **Wait for the result.** The pending page polls
+   then navigates to `/decks/share/pending`. This step was not run.
+4. **Wait for the result.** The pending page ("Share Status") polls
    `POST /svc/decks/deck-share-state` (empty request) every 5 s while the state is
    `WAITING` or `IN_PROGRESS`. The response is
    `{ DeckShareState state = 1; optional uint32 shared_id = 2; }`, where state 0
    is `NO_ACTIVE_SHARE`, 1 `WAITING`, 2 `IN_PROGRESS`, 3 `SUCCESS`, 4 `TOO_LARGE`,
    and `UNKNOWN_ERROR` also exists. On `SUCCESS`, `shared_id` gives
-   `/shared/info/<shared_id>`.
+   `/shared/info/<shared_id>`. With nothing in flight the page reads "No share
+   is currently active."
