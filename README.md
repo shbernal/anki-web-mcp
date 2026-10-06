@@ -1,8 +1,9 @@
 <div align="center">
 
-# anki-web-mcp
-
-Search, download and share AnkiWeb decks from your assistant, on your own session.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/banner/banner-dark.svg">
+  <img alt="anki-web-mcp: search, download and share AnkiWeb decks from your assistant, on your own session." src="assets/banner/banner-light.svg" width="830">
+</picture>
 
 [![npm][npm-badge]][npm]
 [![CI][ci-badge]][ci]
@@ -11,26 +12,44 @@ Search, download and share AnkiWeb decks from your assistant, on your own sessio
 
 ---
 
-[Install](#install) • [Sign in](#sign-in) • [Tools](#tools) • [How it works](#how-it-works) • [Docs](#more)
+<a href="#install"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/nav/install-dark.svg"><img alt="Install" src="assets/nav/install-light.svg"></picture></a><a href="#sign-in"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/nav/sign-in-dark.svg"><img alt="Sign in" src="assets/nav/sign-in-light.svg"></picture></a><a href="#tools"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/nav/tools-dark.svg"><img alt="Tools" src="assets/nav/tools-light.svg"></picture></a><a href="#how-it-works"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/nav/how-it-works-dark.svg"><img alt="How it works" src="assets/nav/how-it-works-light.svg"></picture></a><a href="#more"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/nav/docs-dark.svg"><img alt="Docs" src="assets/nav/docs-light.svg"></picture></a>
 
 ---
 
 </div>
 
-<!-- Demo: record an assistant session that searches shared decks, downloads one, and previews a share. -->
+<div align="center">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/demo/demo-dark.svg">
+  <img alt="An assistant searches shared decks for kanji, downloads the best-rated one and converts it to Markdown" src="assets/demo/demo-light.svg" width="830">
+</picture>
+</div>
 
-anki-web-mcp is an MCP server for [AnkiWeb](https://ankiweb.net).
-It gives an assistant such as Claude the shared-deck catalogue and the decks synced to your account.
+MCP server for [AnkiWeb](https://ankiweb.net), gives an AI agents the shared-deck catalogue and the decks synced to your account, with no Anki desktop app running.
 
 - Search shared decks and read a listing: description, sample notes, reviews.
-- Download a shared deck's `.apkg` to disk, and convert it to Markdown the assistant can read.
-- List the decks synced to your account.
+- Download a shared deck's `.apkg`, and convert it to Markdown the assistant can read.
+- List the decks synced to your account, with due counts.
 - Share one of your decks publicly, only after you have seen a preview and said yes.
-- Reuse the AnkiWeb session already signed in to Chrome, Brave, Edge and other Chromium browsers.
+- Reuse the AnkiWeb session already signed in to your browser.
 
 It is not affiliated with AnkiWeb or Ankitects.
-AnkiWeb's terms do not allow third-party clients, and say it can suspend access at its discretion; [docs/ankiweb.md](docs/ankiweb.md#terms-of-service) quotes the clause.
+AnkiWeb's terms do not allow third-party clients and say it can suspend access at its discretion; [docs/ankiweb.md](docs/ankiweb.md#terms-of-service) quotes the clause.
 AnkiWeb licenses shared decks for personal use only.
+
+## Why this project?
+
+Most Anki MCP servers go through [AnkiConnect](https://ankiweb.net/shared/info/2055492159), an add-on that exposes the collection of a running Anki desktop app.
+That is the right tool for editing your own cards.
+It cannot see the shared catalogue, which lives only on AnkiWeb.
+
+|                                  | AnkiConnect servers | anki-web-mcp |
+| -------------------------------- | ------------------- | ------------ |
+| Needs Anki desktop running       | yes                 | no           |
+| Search and download shared decks | no                  | yes          |
+| Share a deck publicly            | no                  | yes          |
+| List your synced decks           | yes                 | yes          |
+| Add, edit or review cards        | yes                 | no           |
 
 ## Install
 
@@ -47,21 +66,25 @@ Add the server to your MCP client's configuration:
 }
 ```
 
-Node.js 24 or newer is required.
 Then download the Chromium build the server drives:
 
 ```sh
 npx anki-web-mcp@latest --install-browser
 ```
 
-Searching and downloading shared decks work at this point, with no account.
+Searching and downloading shared decks work from here, with no account.
 
 ## Sign in
 
 Listing your decks and sharing one need an AnkiWeb session.
-The first call that needs one looks for it in a local Chromium-family browser where you are signed in to AnkiWeb: Chrome, Chromium, Brave, Edge, Vivaldi and Opera on Linux and macOS, plus Arc and Helium on macOS.
-On macOS that shows one keychain prompt per browser it tries.
+The first call that needs one looks for it in a local browser where you are signed in to AnkiWeb:
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/browsers/browsers-dark.svg">
+  <img alt="Chrome, Chromium, Brave, Edge, Vivaldi and Opera on Linux and macOS; Arc and Helium on macOS" src="assets/browsers/browsers-light.svg" width="830">
+</picture>
+
+On macOS that shows one keychain prompt per browser it tries.
 If no browser has a session, sign in once in a window the server opens:
 
 ```sh
@@ -69,8 +92,8 @@ npx anki-web-mcp@latest --login
 ```
 
 You type your password into AnkiWeb's own page, so it never passes through the server.
-The server keeps the session in `~/.anki-web-mcp/`, created `0700`, and writes the cookie export `0600`.
-`--logout` deletes it.
+The session stays in `~/.anki-web-mcp/`, created `0700`, and `--logout` deletes it.
+[docs/cli.md](docs/cli.md) lists every flag.
 
 ## Tools
 
@@ -85,24 +108,19 @@ The server keeps the session in `~/.anki-web-mcp/`, created `0700`, and writes t
 | `server_status`            | version, data directory, and whether the session is valid |
 | `close_session`            | closes the headless browser until the next call needs it  |
 
-`share_deck` publishes publicly under your account.
-Without `confirm: true` it only returns a preview, and the tool description tells the assistant to show you that preview and wait for your go-ahead.
-Calling it with `confirm: true` also makes AnkiWeb's declaration that you own the material or have a license to share it.
+`convert_deck_to_markdown` writes [Flashcard Markdown](https://github.com/shbernal/flashcard-md-spec) through [`@ankimd/core`](https://www.npmjs.com/package/@ankimd/core), and reports what did not convert.
 
-## Command line
+### Sharing asks first
 
-| flag                           | does                                                      |
-| ------------------------------ | --------------------------------------------------------- |
-| `--login`                      | signs in to AnkiWeb in a visible browser window           |
-| `--logout`                     | deletes the stored session, keeping downloads             |
-| `--import-from-browser [name]` | imports the session from a local browser now              |
-| `--no-auto-import`             | never looks in local browsers on its own                  |
-| `--install-browser`            | downloads Playwright's Chromium                           |
-| `--channel <name>`             | drives an installed browser, such as `chrome`, instead    |
-| `--data-dir <path>`            | keeps the session elsewhere; also `ANKI_WEB_MCP_DATA_DIR` |
-| `-h`, `--help`                 | lists these flags                                         |
+`share_deck` publishes under your account, so it takes two calls.
+Without `confirm: true` it only returns a preview, and the assistant is told to show it to you and wait.
 
-Without `--login`, `--logout`, `--import-from-browser` or `--install-browser`, it serves MCP over stdio. A flag it does not know, or a missing value, prints one line and exits with status 2.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/share/share-dark.svg">
+  <img alt="share_deck: call 1 returns a preview, the user says yes, call 2 with confirm: true reads everything again and publishes" src="assets/share/share-light.svg" width="830">
+</picture>
+
+Confirming also makes AnkiWeb's declaration that you own the material or have a license to share it.
 
 ## How it works
 
@@ -117,18 +135,19 @@ flowchart LR
   B[Local browser profile] -. "session import" .-> S
 ```
 
-- Shared-deck reads go out without cookies, and the server caches each answer for as long as AnkiWeb allows, ten minutes.
-- After a few anonymous downloads AnkiWeb asks for a login, and the server retries the download with your session.
-- Calls on your account go through one headless browser, one at a time, which closes after five idle minutes.
-- The server spaces requests at least a second apart. AnkiWeb answers `429` after about four searches a minute.
+- Shared-deck reads go out without cookies, cached for as long as AnkiWeb allows: ten minutes.
+- After a few anonymous downloads AnkiWeb asks for a login, and the download is retried with your session.
+- Calls on your account go through one headless browser, one at a time, closed after five idle minutes.
+- Requests are spaced at least a second apart, since AnkiWeb answers `429` after about four searches a minute.
 
 ## More
 
-- [docs/ankiweb.md](docs/ankiweb.md): every AnkiWeb endpoint used, as observed
+- [docs/cli.md](docs/cli.md): every command-line flag
 - [docs/session.md](docs/session.md): the data directory, signing in, browser import
 - [docs/shared-decks.md](docs/shared-decks.md): search, details, downloads and conversion to Markdown
 - [docs/sharing.md](docs/sharing.md): the share flow and its confirmation
 - [docs/errors.md](docs/errors.md): what a failing tool returns, and request pacing
+- [docs/ankiweb.md](docs/ankiweb.md): every AnkiWeb endpoint used, as observed
 - [CONTRIBUTING.md](CONTRIBUTING.md): setup, gates, and what to update when AnkiWeb changes
 - [NOTICE](NOTICE): the browser import is ported from [linkedin-mcp-server](https://github.com/stickerdaniel/linkedin-mcp-server)
 
@@ -139,4 +158,4 @@ flowchart LR
 [license]: LICENSE
 [license-badge]: https://img.shields.io/github/license/shbernal/anki-web-mcp?style=for-the-badge&labelColor=1a1b26&color=e0af68
 [node]: https://nodejs.org
-[node-badge]: https://img.shields.io/badge/node-%3E%3D24-7aa2f7?style=for-the-badge&logo=nodedotjs&logoColor=7aa2f7&labelColor=1a1b26
+[node-badge]: https://img.shields.io/badge/node-%E2%89%A524-7aa2f7?style=for-the-badge&logo=nodedotjs&logoColor=7aa2f7&labelColor=1a1b26
