@@ -13,6 +13,12 @@ const MAX_REASON_LENGTH = 200;
 const SEARCH_LIMIT =
   "AnkiWeb is rate-limiting this address (HTTP 429). It allows about four searches a minute and can stay limited for a few minutes; wait before trying again.";
 
+/**
+ * A signed-in session's daily download cap. Waiting minutes does not lift it,
+ * so it is not worded as a rate limit.
+ */
+const DAILY_LIMIT = /daily limit/iu;
+
 function quoted(reason: string): string {
   const trimmed = reason.trim();
   return trimmed.length > MAX_REASON_LENGTH ? `${trimmed.slice(0, MAX_REASON_LENGTH)}…` : trimmed;
@@ -26,6 +32,9 @@ function message(status: number, reason: string, url: string | undefined): strin
     return SEARCH_LIMIT;
   }
   const said = quoted(reason);
+  if (DAILY_LIMIT.test(said)) {
+    return `AnkiWeb has refused further downloads today (HTTP 429). It says: "${said}" Retrying before tomorrow will fail the same way.`;
+  }
   const reasonSentence = said === "" ? "" : ` It says: "${said}"`;
   return `AnkiWeb is rate-limiting this address (HTTP 429).${reasonSentence} Wait a few minutes before trying again.`;
 }

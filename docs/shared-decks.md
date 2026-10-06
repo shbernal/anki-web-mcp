@@ -33,7 +33,9 @@ by URL, up to 50 entries. So repeating a search, or paging through one, costs
 one request. A `429` becomes a tool error that tells the caller to wait. A
 refused search is worded as the search limit, since its body ("Failed to parse
 input.") says nothing. Any other `429` quotes AnkiWeb's body, which for a
-download is "Please log in to download more decks."
+download is "Please log in to download more decks." A signed-in download refused
+with "Daily limit exceeded; please try again tomorrow." is worded as a daily
+cap instead, since waiting minutes does not lift it.
 
 ## Search
 

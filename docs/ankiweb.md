@@ -164,6 +164,13 @@ event for it. The response is the `.apkg` itself (`application/octet-stream`,
   returns the deck. `item-info` kept answering `200` while downloads were
   refused. How many anonymous downloads are allowed, and for how long, is not
   known.
+- **Signing in lifts the anonymous refusal at once.** A signed-in download sent
+  one second after an anonymous `429` returned the deck, with no cooldown.
+- **Signed-in downloads have a daily cap.** On 2026-10-06 one session
+  downloaded the same 353 KB deck 16 times, 3 s apart, and the 17th returned
+  `429` with "Daily limit exceeded; please try again tomorrow." Downloads
+  earlier that day may have counted towards it, so 16 is a lower bound. Whether
+  the cap is per account or per address, and when the day resets, is not known.
 - `t` is required. Without it the call returns `400` and "missing field `t`".
 - `download_key` has the shape of a JWT: the header segment decodes to
   `{"op":"sdd","iat":<unix seconds>,"jv":1}`. A key minted a few minutes earlier
