@@ -54,6 +54,15 @@ describe("server", () => {
       { name: "get_shared_deck" },
       { name: "download_shared_deck" },
       { name: "list_my_decks" },
+      {
+        name: "share_deck",
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: true,
+        },
+      },
     ]);
     await client.close();
   });

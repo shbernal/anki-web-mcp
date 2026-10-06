@@ -12,13 +12,16 @@ export interface FakeReply {
   readonly body: Uint8Array;
 }
 
+/** Answers a request posted through `context.request`, given its URL and body. */
+export type Respond = (url: string, body: Uint8Array) => Promise<FakeReply>;
+
 /**
  * The slice of a Playwright context the session touches, with no browser behind
  * it. `respond` answers what is posted through `context.request`.
  */
 export function fakeContext(
   initial: readonly Readonly<Cookie>[] = [],
-  respond: (url: string) => Promise<FakeReply> = async () => ({
+  respond: Respond = async () => ({
     status: 404,
     body: new Uint8Array(),
   }),
@@ -39,8 +42,8 @@ export function fakeContext(
       listeners.push(listener);
     },
     request: {
-      post: async (url: string) => {
-        const { status, body } = await respond(url);
+      post: async (url: string, options?: { readonly data?: Readonly<Uint8Array> }) => {
+        const { status, body } = await respond(url, Uint8Array.from(options?.data ?? []));
         return {
           status: () => status,
           ok: () => status >= 200 && status < 300,

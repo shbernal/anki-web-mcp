@@ -1,7 +1,5 @@
 import type { APIRequestContext } from "playwright";
 
-import { AuthRequiredError } from "../browser/auth-required-error.js";
-import { AnkiWebHttpError } from "./http-error.js";
 import {
   decodeMessage,
   type Message,
@@ -11,9 +9,9 @@ import {
   readNumber,
   readString,
 } from "./protobuf.js";
+import { postService } from "./service.js";
 import { DECK_LIST_URL } from "./urls.js";
 
-const HTTP_FORBIDDEN = 403;
 const SEPARATOR = "::";
 
 // Field numbers, as `docs/ankiweb.md` lists them for each message.
@@ -109,15 +107,5 @@ export function decodeDeckList(body: Readonly<Uint8Array>): MyDeckList {
 
 /** The signed-in user's synced decks, through the browser context's cookie jar. */
 export async function listMyDecks(request: APIRequestContext): Promise<MyDeckList> {
-  const response = await request.post(DECK_LIST_URL, {
-    headers: { "content-type": "application/octet-stream" },
-    data: Buffer.alloc(0),
-  });
-  if (response.status() === HTTP_FORBIDDEN) {
-    throw new AuthRequiredError();
-  }
-  if (!response.ok()) {
-    throw new AnkiWebHttpError(response.status(), await response.text());
-  }
-  return decodeDeckList(await response.body());
+  return decodeDeckList(await postService(request, DECK_LIST_URL));
 }

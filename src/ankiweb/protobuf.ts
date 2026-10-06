@@ -130,3 +130,51 @@ export function readMessage(message: Message, field: number): Message | undefine
 export function readMessages(message: Message, field: number): Message[] {
   return (message.get(field) ?? []).map((value) => decodeMessage(bytesOf(value, field)));
 }
+
+/**
+ * A field to write: a number, `bigint` or bool as a varint, a string as UTF-8,
+ * and bytes as they are, which is how a nested message goes in. `undefined`
+ * leaves the field out.
+ */
+export type FieldValue = bigint | number | boolean | string | Readonly<Uint8Array> | undefined;
+
+const utf8Encoder = new TextEncoder();
+
+function writeVarint(value: bigint): number[] {
+  if (value < 0n) {
+    throw new ProtobufError("Negative varints are not supported");
+  }
+  const out: number[] = [];
+  let rest = value;
+  while (rest > BigInt(PAYLOAD_MASK)) {
+    out.push(Number(rest & BigInt(PAYLOAD_MASK)) | CONTINUATION_BIT);
+    rest >>= PAYLOAD_BITS;
+  }
+  out.push(Number(rest));
+  return out;
+}
+
+function writeTag(field: number, wireType: number): number[] {
+  return writeVarint((BigInt(field) << WIRE_TYPE_BITS) | BigInt(wireType));
+}
+
+function writeField(field: number, value: Exclude<FieldValue, undefined>): number[] {
+  if (typeof value === "bigint" || typeof value === "number" || typeof value === "boolean") {
+    return [...writeTag(field, VARINT), ...writeVarint(BigInt(value))];
+  }
+  const bytes = typeof value === "string" ? utf8Encoder.encode(value) : value;
+  return [...writeTag(field, LENGTH_DELIMITED), ...writeVarint(BigInt(bytes.length)), ...bytes];
+}
+
+/** Encodes `[field number, value]` pairs in the order given. */
+export function encodeMessage(
+  fields: readonly (readonly [number, FieldValue])[],
+): Uint8Array<ArrayBuffer> {
+  const out: number[] = [];
+  for (const [field, value] of fields) {
+    if (value !== undefined) {
+      out.push(...writeField(field, value));
+    }
+  }
+  return Uint8Array.from(out);
+}

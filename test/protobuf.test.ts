@@ -1,7 +1,10 @@
+import { readFile } from "node:fs/promises";
+
 import { describe, expect, it } from "vitest";
 
 import {
   decodeMessage,
+  encodeMessage,
   ProtobufError,
   readBool,
   readMessages,
@@ -57,5 +60,37 @@ describe("decodeMessage", () => {
   it("rejects reading a field as the wrong kind", () => {
     expect.assertions(1);
     expect(() => readString(decodeMessage(Uint8Array.of(0x08, 0x01)), 1)).toThrow(ProtobufError);
+  });
+});
+
+describe("encodeMessage", () => {
+  it("writes the bytes AnkiWeb sends for a deck id", async () => {
+    expect.assertions(1);
+    // The recorded `deck-share-info` answer: field 1 holding { 5: 1_791_280_883_007 }.
+    const body = await readFile(
+      new URL("fixtures/ankiweb/deck-share-info-never-shared.bin", import.meta.url),
+    );
+    const inner = encodeMessage([[5, 1_791_280_883_007n]]);
+    expect(encodeMessage([[1, inner]])).toStrictEqual(Uint8Array.from(body));
+  });
+
+  it("writes strings, bools and multi-byte lengths, and leaves out undefined", () => {
+    expect.assertions(3);
+    const long = "é".repeat(100);
+    const message = decodeMessage(
+      encodeMessage([
+        [1, long],
+        [2, true],
+        [3, undefined],
+      ]),
+    );
+    expect(readString(message, 1)).toBe(long);
+    expect(readBool(message, 2)).toBe(true);
+    expect(message.has(3)).toBe(false);
+  });
+
+  it("refuses a negative varint", () => {
+    expect.assertions(1);
+    expect(() => encodeMessage([[1, -1]])).toThrow(ProtobufError);
   });
 });
