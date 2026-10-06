@@ -6,7 +6,14 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { readStoredSession, writeStoredSession } from "../src/browser/cookies.js";
 import { sessionStatus } from "../src/browser/login.js";
-import { type DataDir, ensureDataDir, resolveDataDir } from "../src/data-dir.js";
+import {
+  type AccountPaths,
+  accountPaths,
+  type DataDir,
+  DEFAULT_ACCOUNT,
+  ensureDataDir,
+  resolveDataDir,
+} from "../src/data-dir.js";
 import { fakeFetch } from "./fake-fetch.js";
 
 const STORED = {
@@ -34,10 +41,12 @@ function accountStatus(loggedIn: boolean) {
 
 let scratch: string;
 let dataDir: DataDir;
+let account: AccountPaths;
 
 beforeEach(async () => {
   scratch = await mkdtemp(join(tmpdir(), "anki-web-mcp-"));
   dataDir = resolveDataDir(join(scratch, "data"));
+  account = accountPaths(dataDir, DEFAULT_ACCOUNT);
 });
 
 afterEach(async () => {
@@ -48,7 +57,7 @@ describe("sessionStatus", () => {
   it("asks nothing when no data directory exists", async () => {
     expect.assertions(2);
     const status = accountStatus(true);
-    await expect(sessionStatus(dataDir, status.fetch)).resolves.toBe("missing");
+    await expect(sessionStatus(account, status.fetch)).resolves.toBe("missing");
     expect(status.urls).toStrictEqual([]);
   });
 
@@ -56,24 +65,24 @@ describe("sessionStatus", () => {
     expect.assertions(2);
     await ensureDataDir(dataDir);
     const status = accountStatus(true);
-    await expect(sessionStatus(dataDir, status.fetch)).resolves.toBe("missing");
+    await expect(sessionStatus(account, status.fetch)).resolves.toBe("missing");
     expect(status.urls).toStrictEqual([]);
   });
 
   it("reports signed in and records the check", async () => {
     expect.assertions(2);
     await ensureDataDir(dataDir);
-    await writeStoredSession(dataDir.cookies, STORED);
-    await expect(sessionStatus(dataDir, accountStatus(true).fetch)).resolves.toBe("signed-in");
-    const stored = await readStoredSession(dataDir.cookies);
+    await writeStoredSession(account.cookies, STORED);
+    await expect(sessionStatus(account, accountStatus(true).fetch)).resolves.toBe("signed-in");
+    const stored = await readStoredSession(account.cookies);
     expect(stored?.validatedAt).not.toBe(STORED.validatedAt);
   });
 
   it("reports signed out when AnkiWeb turns the cookie down", async () => {
     expect.assertions(2);
     await ensureDataDir(dataDir);
-    await writeStoredSession(dataDir.cookies, STORED);
-    await expect(sessionStatus(dataDir, accountStatus(false).fetch)).resolves.toBe("signed-out");
-    await expect(readStoredSession(dataDir.cookies)).resolves.toStrictEqual(STORED);
+    await writeStoredSession(account.cookies, STORED);
+    await expect(sessionStatus(account, accountStatus(false).fetch)).resolves.toBe("signed-out");
+    await expect(readStoredSession(account.cookies)).resolves.toStrictEqual(STORED);
   });
 });

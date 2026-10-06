@@ -3,7 +3,7 @@ import { readFile, rm, writeFile } from "node:fs/promises";
 
 import { z } from "zod";
 
-import { type DataDir, unlessMissing } from "../data-dir.js";
+import { type AccountPaths, unlessMissing } from "../data-dir.js";
 import { ToolError } from "../errors.js";
 
 const PRIVATE_FILE_MODE = 0o600;
@@ -78,7 +78,7 @@ function inUse(lock: LockFile, profile: string): ProfileInUseError {
 }
 
 /** The two paths the lock is about: the profile, and the file naming who has it. */
-export type LockedPaths = Readonly<Pick<DataDir, "profile" | "profileLock">>;
+export type LockedPaths = Readonly<Pick<AccountPaths, "profile" | "profileLock">>;
 
 /** Throws when another live process holds the profile. */
 export async function assertProfileFree({ profile, profileLock }: LockedPaths): Promise<void> {

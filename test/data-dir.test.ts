@@ -5,9 +5,11 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
+  accountPaths,
   assertChildOf,
   checkDataDir,
   DataDirError,
+  DEFAULT_ACCOUNT,
   ensureDataDir,
   removeSession,
   resolveDataDir,
@@ -47,9 +49,6 @@ describe("resolveDataDir", () => {
     expect(resolveDataDir("/from/flag", { ...linux, env }).root).toBe("/from/flag");
     expect(resolveDataDir(undefined, { ...linux, env })).toStrictEqual({
       root: "/from/env",
-      profile: "/from/env/profile",
-      cookies: "/from/env/cookies.json",
-      profileLock: "/from/env/profile.lock",
       downloads: "/from/env/downloads",
     });
     expect(resolveDataDir(undefined, {}).root).toMatch(/anki-web-mcp$/u);
@@ -59,9 +58,6 @@ describe("resolveDataDir", () => {
     expect.assertions(1);
     expect(resolveDataDir(undefined, linux)).toStrictEqual({
       root: "/home/u/.local/state/anki-web-mcp",
-      profile: "/home/u/.local/state/anki-web-mcp/profile",
-      cookies: "/home/u/.local/state/anki-web-mcp/cookies.json",
-      profileLock: "/home/u/.local/state/anki-web-mcp/profile.lock",
       downloads: "/home/u/.local/share/anki-web-mcp/downloads",
     });
   });
@@ -148,25 +144,29 @@ describe("removeSession", () => {
   it("deletes the profile and the cookie export and keeps downloads", async () => {
     expect.assertions(1);
     const dir = resolveDataDir(join(scratch, "data"));
+    const account = accountPaths(dir, DEFAULT_ACCOUNT);
     await ensureDataDir(dir);
-    await mkdir(dir.profile);
-    await writeFile(join(dir.profile, "Cookies"), "");
-    await writeFile(dir.cookies, "{}");
-    await removeSession(dir);
+    await mkdir(account.profile);
+    await writeFile(join(account.profile, "Cookies"), "");
+    await writeFile(account.cookies, "{}");
+    await removeSession(dir, account);
     await expect(readdir(dir.root)).resolves.toStrictEqual(["downloads"]);
   });
 
   it("does nothing when there is no data dir", async () => {
     expect.assertions(1);
     const missing = resolveDataDir(join(scratch, "missing"));
-    await expect(removeSession(missing)).resolves.toBeUndefined();
+    await expect(
+      removeSession(missing, accountPaths(missing, DEFAULT_ACCOUNT)),
+    ).resolves.toBeUndefined();
   });
 
-  it("refuses targets outside the data dir", async () => {
+  it("refuses targets outside the account's directory", async () => {
     expect.assertions(1);
-    const dir = { ...resolveDataDir(join(scratch, "data")), profile: scratch };
+    const dir = resolveDataDir(join(scratch, "data"));
+    const account = { ...accountPaths(dir, DEFAULT_ACCOUNT), profile: scratch };
     await ensureDataDir(dir);
-    await expect(removeSession(dir)).rejects.toThrow(/refusing to delete/u);
+    await expect(removeSession(dir, account)).rejects.toThrow(/refusing to delete/u);
   });
 });
 

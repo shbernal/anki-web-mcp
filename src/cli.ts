@@ -7,7 +7,7 @@ import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import { installBrowser } from "./browser/launch.js";
 import { login, logout, sessionStatus } from "./browser/login.js";
 import { BrowserSession } from "./browser/session.js";
-import { resolveDataDir } from "./data-dir.js";
+import { accountPaths, DEFAULT_ACCOUNT, resolveDataDir } from "./data-dir.js";
 import { BROWSER_NAMES, type BrowserName, isBrowserName } from "./import/discovery.js";
 import { importFromBrowser } from "./import/orchestrate.js";
 import { createServer } from "./server.js";
@@ -98,28 +98,29 @@ function parseCommandLine(args: readonly string[]) {
 
 const values = parseCommandLine(process.argv.slice(ARGV_OFFSET));
 const dataDir = resolveDataDir(values["data-dir"]);
+const account = accountPaths(dataDir, DEFAULT_ACCOUNT);
 const { channel } = values;
 const importFrom = values["import-from-browser"];
 
 async function importSession(browser: BrowserName | undefined): Promise<void> {
-  const session = new BrowserSession({ dataDir, channel, holder: "import" });
+  const session = new BrowserSession({ dataDir, account, channel, holder: "import" });
   try {
     const label = await importFromBrowser(browser, (cookies) => session.adoptCookies(cookies));
-    console.error(`anki-web-mcp: imported the session from ${label}; stored in ${dataDir.root}`);
+    console.error(`anki-web-mcp: imported the session from ${label}; stored in ${account.dir}`);
   } finally {
     await session.close();
   }
 }
 
 async function reportStatus(): Promise<void> {
-  const state = await sessionStatus(dataDir);
+  const state = await sessionStatus(account);
   if (state === "signed-in") {
-    console.error(`anki-web-mcp: signed in to AnkiWeb; session stored in ${dataDir.root}`);
+    console.error(`anki-web-mcp: signed in to AnkiWeb; session stored in ${account.dir}`);
     return;
   }
   console.error(
     state === "missing"
-      ? `anki-web-mcp: no session stored in ${dataDir.root}; run --login or --import-from-browser`
+      ? `anki-web-mcp: no session stored in ${account.dir}; run --login or --import-from-browser`
       : "anki-web-mcp: AnkiWeb turned down the stored session; run --login",
   );
   process.exitCode = 1;
@@ -128,6 +129,7 @@ async function reportStatus(): Promise<void> {
 async function serve(): Promise<void> {
   const session = new BrowserSession({
     dataDir,
+    account,
     channel,
     autoImport: values["auto-import"] ? (adopt) => importFromBrowser(undefined, adopt) : undefined,
   });
@@ -149,10 +151,10 @@ try {
   } else if (values["install-browser"] === true) {
     process.exitCode = await installBrowser();
   } else if (values.login === true) {
-    await login(dataDir, channel);
+    await login(dataDir, account, channel);
   } else if (values.logout === true) {
-    await logout(dataDir);
-    console.error(`anki-web-mcp: session removed from ${dataDir.root}`);
+    await logout(dataDir, account);
+    console.error(`anki-web-mcp: session removed from ${account.dir}`);
   } else if (values.status === true) {
     await reportStatus();
   } else if (importFrom === undefined) {

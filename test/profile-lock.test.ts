@@ -7,7 +7,14 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { logout } from "../src/browser/login.js";
 import { lockProfile, ProfileInUseError } from "../src/browser/profile-lock.js";
 import { BrowserSession } from "../src/browser/session.js";
-import { type DataDir, ensureDataDir, resolveDataDir } from "../src/data-dir.js";
+import {
+  type AccountPaths,
+  accountPaths,
+  type DataDir,
+  DEFAULT_ACCOUNT,
+  ensureDataDir,
+  resolveDataDir,
+} from "../src/data-dir.js";
 import { fakeContext } from "./fake-context.js";
 
 /** Above any Linux or macOS pid limit, so never a running process. */
@@ -15,10 +22,11 @@ const DEAD_PID = 2 ** 30;
 
 let scratch: string;
 let dataDir: DataDir;
+let account: AccountPaths;
 
 /** Writes the lock as another process would have left it. */
 async function heldBy(pid: number, holder: string): Promise<void> {
-  await writeFile(dataDir.profileLock, JSON.stringify({ pid, holder, token: "theirs" }));
+  await writeFile(account.profileLock, JSON.stringify({ pid, holder, token: "theirs" }));
 }
 
 async function exists(path: string): Promise<boolean> {
@@ -33,6 +41,7 @@ async function exists(path: string): Promise<boolean> {
 beforeEach(async () => {
   scratch = await mkdtemp(join(tmpdir(), "anki-web-mcp-"));
   dataDir = resolveDataDir(join(scratch, "data"));
+  account = accountPaths(dataDir, DEFAULT_ACCOUNT);
   await ensureDataDir(dataDir);
 });
 
@@ -43,17 +52,17 @@ afterEach(async () => {
 describe("profile lock", () => {
   it("names this process while held and is gone once released", async () => {
     expect.assertions(2);
-    const unlock = await lockProfile(dataDir, "login");
-    const lock: unknown = JSON.parse(await readFile(dataDir.profileLock, "utf8"));
+    const unlock = await lockProfile(account, "login");
+    const lock: unknown = JSON.parse(await readFile(account.profileLock, "utf8"));
     expect(lock).toMatchObject({ pid: process.pid, holder: "login" });
     await unlock();
-    await expect(exists(dataDir.profileLock)).resolves.toBe(false);
+    await expect(exists(account.profileLock)).resolves.toBe(false);
   });
 
   it("refuses a profile another live process holds, and says how to free it", async () => {
     expect.assertions(2);
     await heldBy(process.ppid, "server");
-    const failure = lockProfile(dataDir, "login");
+    const failure = lockProfile(account, "login");
     await expect(failure).rejects.toThrow(ProfileInUseError);
     await expect(failure).rejects.toThrow(/process \d+.*close_session/u);
   });
@@ -61,24 +70,24 @@ describe("profile lock", () => {
   it("takes over a lock left by a process that is gone", async () => {
     expect.assertions(1);
     await heldBy(DEAD_PID, "server");
-    const unlock = await lockProfile(dataDir, "login");
-    const lock: unknown = JSON.parse(await readFile(dataDir.profileLock, "utf8"));
+    const unlock = await lockProfile(account, "login");
+    const lock: unknown = JSON.parse(await readFile(account.profileLock, "utf8"));
     expect(lock).toMatchObject({ pid: process.pid });
     await unlock();
   });
 
   it("takes over a lock that is not valid JSON", async () => {
     expect.assertions(1);
-    await writeFile(dataDir.profileLock, "{");
-    await expect(lockProfile(dataDir, "login")).resolves.toBeTypeOf("function");
+    await writeFile(account.profileLock, "{");
+    await expect(lockProfile(account, "login")).resolves.toBeTypeOf("function");
   });
 
   it("leaves a lock taken since alone on a late release", async () => {
     expect.assertions(1);
-    const first = await lockProfile(dataDir, "server");
-    const second = await lockProfile(dataDir, "server");
+    const first = await lockProfile(account, "server");
+    const second = await lockProfile(account, "server");
     await first();
-    await expect(exists(dataDir.profileLock)).resolves.toBe(true);
+    await expect(exists(account.profileLock)).resolves.toBe(true);
     await second();
   });
 });
@@ -90,6 +99,7 @@ describe("browser session and the lock", () => {
     let launched = false;
     const session = new BrowserSession({
       dataDir,
+      account,
       launch: async () => {
         launched = true;
         return fakeContext().context;
@@ -101,32 +111,37 @@ describe("browser session and the lock", () => {
 
   it("holds the profile while the browser is open", async () => {
     expect.assertions(2);
-    const session = new BrowserSession({ dataDir, launch: async () => fakeContext().context });
+    const session = new BrowserSession({
+      dataDir,
+      account,
+      launch: async () => fakeContext().context,
+    });
     await session.use(async () => "ran");
-    await expect(exists(dataDir.profileLock)).resolves.toBe(true);
+    await expect(exists(account.profileLock)).resolves.toBe(true);
     await session.close();
-    await expect(exists(dataDir.profileLock)).resolves.toBe(false);
+    await expect(exists(account.profileLock)).resolves.toBe(false);
   });
 
   it("gives the profile back when the launch fails", async () => {
     expect.assertions(2);
     const session = new BrowserSession({
       dataDir,
+      account,
       launch: async () => {
         throw new Error("no browser");
       },
     });
     await expect(session.use(async () => "ran")).rejects.toThrow("no browser");
-    await expect(exists(dataDir.profileLock)).resolves.toBe(false);
+    await expect(exists(account.profileLock)).resolves.toBe(false);
   });
 });
 
 describe("logout", () => {
   it("keeps the session while another process has the profile open", async () => {
     expect.assertions(2);
-    await mkdir(dataDir.profile);
+    await mkdir(account.profile);
     await heldBy(process.ppid, "server");
-    await expect(logout(dataDir)).rejects.toThrow(ProfileInUseError);
-    await expect(exists(dataDir.profile)).resolves.toBe(true);
+    await expect(logout(dataDir, account)).rejects.toThrow(ProfileInUseError);
+    await expect(exists(account.profile)).resolves.toBe(true);
   });
 });

@@ -5,7 +5,13 @@ import type { BrowserContext } from "playwright";
 import { checkLoggedIn } from "../ankiweb/account.js";
 import type { Fetch } from "../ankiweb/response-cache.js";
 import { LOGIN_URL } from "../ankiweb/urls.js";
-import { checkDataDir, type DataDir, ensureDataDir, removeSession } from "../data-dir.js";
+import {
+  type AccountPaths,
+  checkDataDir,
+  type DataDir,
+  ensureAccount,
+  removeSession,
+} from "../data-dir.js";
 import {
   checkStoredSession,
   hasSessionCookie,
@@ -25,19 +31,27 @@ const POLL_INTERVAL_MS = 1000;
  * in, then stores the session and closes the window. The password never passes
  * through this process: AnkiWeb's own form takes it.
  */
-export async function login(dataDir: DataDir, channel: string | undefined): Promise<void> {
-  await ensureDataDir(dataDir);
-  const unlock = await lockProfile(dataDir, "login");
+export async function login(
+  dataDir: DataDir,
+  account: AccountPaths,
+  channel: string | undefined,
+): Promise<void> {
+  await ensureAccount(dataDir, account);
+  const unlock = await lockProfile(account, "login");
   try {
-    await signIn(dataDir, channel);
+    await signIn(dataDir, account, channel);
   } finally {
     await unlock();
   }
 }
 
-async function signIn(dataDir: DataDir, channel: string | undefined): Promise<void> {
+async function signIn(
+  dataDir: DataDir,
+  account: AccountPaths,
+  channel: string | undefined,
+): Promise<void> {
   const context = await launchContext({
-    profileDir: dataDir.profile,
+    profileDir: account.profile,
     downloadsDir: dataDir.downloads,
     headless: false,
     channel,
@@ -51,8 +65,8 @@ async function signIn(dataDir: DataDir, channel: string | undefined): Promise<vo
     await page.goto(LOGIN_URL);
     console.error("anki-web-mcp: sign in to AnkiWeb in the browser window");
     await waitForSignIn(context, closed);
-    await exportSession(context, dataDir, new Date());
-    console.error(`anki-web-mcp: signed in; session stored in ${dataDir.root}`);
+    await exportSession(context, account, new Date());
+    console.error(`anki-web-mcp: signed in; session stored in ${account.dir}`);
   } finally {
     if (!closed.value) {
       await context.close();
@@ -82,9 +96,9 @@ async function waitForSignIn(
 }
 
 /** Deletes the stored session, unless a browser has the profile open. */
-export async function logout(dataDir: DataDir): Promise<void> {
-  await assertProfileFree(dataDir);
-  await removeSession(dataDir);
+export async function logout(dataDir: DataDir, account: AccountPaths): Promise<void> {
+  await assertProfileFree(account);
+  await removeSession(dataDir, account);
 }
 
 /** What `--status` found: no session on disk, or AnkiWeb's answer for the one there is. */
@@ -96,14 +110,14 @@ export type SessionState = "missing" | "signed-in" | "signed-out";
  * profile open, and it never looks at the profile itself.
  */
 export async function sessionStatus(
-  dataDir: DataDir,
+  account: AccountPaths,
   fetcher: Fetch = fetch,
 ): Promise<SessionState> {
-  const stored = (await checkDataDir(dataDir.root))
-    ? await readStoredSession(dataDir.cookies)
+  const stored = (await checkDataDir(account.dir))
+    ? await readStoredSession(account.cookies)
     : undefined;
   if (stored === undefined || !hasSessionCookie(stored.cookies)) {
     return "missing";
   }
-  return (await checkStoredSession(dataDir.cookies, fetcher)) ? "signed-in" : "signed-out";
+  return (await checkStoredSession(account.cookies, fetcher)) ? "signed-in" : "signed-out";
 }

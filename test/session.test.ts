@@ -11,7 +11,14 @@ import type { Fetch } from "../src/ankiweb/response-cache.js";
 import { AuthRequiredError } from "../src/browser/auth-required-error.js";
 import { readStoredSession, writeStoredSession } from "../src/browser/cookies.js";
 import { BrowserSession, type SessionOptions } from "../src/browser/session.js";
-import { type DataDir, ensureDataDir, resolveDataDir } from "../src/data-dir.js";
+import {
+  type AccountPaths,
+  accountPaths,
+  type DataDir,
+  DEFAULT_ACCOUNT,
+  ensureDataDir,
+  resolveDataDir,
+} from "../src/data-dir.js";
 import { type FakeContext, fakeContext } from "./fake-context.js";
 
 const SESSION_COOKIE = {
@@ -30,12 +37,14 @@ const touch = async (context: BrowserContext) => context;
 
 let scratch: string;
 let dataDir: DataDir;
+let account: AccountPaths;
 let fake: FakeContext;
 let launches: number;
 
 function session(loggedIn = true, options: Partial<SessionOptions> = {}): BrowserSession {
   return new BrowserSession({
     dataDir,
+    account,
     idleMs: IDLE_MS,
     launch: async () => {
       launches += 1;
@@ -52,6 +61,7 @@ const checkJar = async () => fake.jar.some((cookie: Readonly<Cookie>) => cookie.
 beforeEach(async () => {
   scratch = await mkdtemp(join(tmpdir(), "anki-web-mcp-"));
   dataDir = resolveDataDir(join(scratch, "data"));
+  account = accountPaths(dataDir, DEFAULT_ACCOUNT);
   fake = fakeContext();
   launches = 0;
 });
@@ -72,7 +82,7 @@ describe("browser session", () => {
   it("seeds a profile without a session from the cookie export", async () => {
     expect.assertions(1);
     await session().use(touch);
-    await writeStoredSession(dataDir.cookies, {
+    await writeStoredSession(account.cookies, {
       validatedAt: "2026-10-06T12:00:00.000Z",
       cookies: [SESSION_COOKIE],
     });
@@ -93,7 +103,7 @@ describe("browser session", () => {
     fake = fakeContext([SESSION_COOKIE]);
     const browser = session();
     await expect(browser.isAuthenticated()).resolves.toBe(true);
-    const stored = await readStoredSession(dataDir.cookies);
+    const stored = await readStoredSession(account.cookies);
     expect(stored?.validatedAt).toBe(browser.lastValidatedAt?.toISOString());
   });
 
@@ -160,7 +170,7 @@ describe("adopting imported cookies", () => {
     const browser = session(true, { checkLoggedIn: checkJar });
     await expect(browser.adoptCookies([{ ...SESSION_COOKIE, value: "good" }])).resolves.toBe(true);
     expect(fake.jar.map((cookie: Readonly<Cookie>) => cookie.value)).toStrictEqual(["good"]);
-    const stored = await readStoredSession(dataDir.cookies);
+    const stored = await readStoredSession(account.cookies);
     expect(stored?.cookies.map((cookie) => cookie.value)).toStrictEqual(["good"]);
   });
 
@@ -214,19 +224,19 @@ describe("checking the session without a browser", () => {
   it("asks with the stored cookie and launches nothing when AnkiWeb says yes", async () => {
     expect.assertions(4);
     await ensureDataDir(dataDir);
-    await writeStoredSession(dataDir.cookies, STORED);
+    await writeStoredSession(account.cookies, STORED);
     const status = accountStatus(true);
     await expect(session(false, { fetch: status.fetch }).checkSignedIn()).resolves.toBe(true);
     expect(status.cookies).toStrictEqual(["ankiweb=token"]);
     expect(launches).toBe(0);
-    const stored = await readStoredSession(dataDir.cookies);
+    const stored = await readStoredSession(account.cookies);
     expect(stored?.validatedAt).not.toBe(STORED.validatedAt);
   });
 
   it("asks the browser when AnkiWeb turns the stored cookie down", async () => {
     expect.assertions(2);
     await ensureDataDir(dataDir);
-    await writeStoredSession(dataDir.cookies, STORED);
+    await writeStoredSession(account.cookies, STORED);
     const browser = session(true, { fetch: accountStatus(false).fetch });
     await expect(browser.checkSignedIn()).resolves.toBe(true);
     expect(launches).toBe(1);
@@ -242,7 +252,7 @@ describe("checking the session without a browser", () => {
   it("asks a browser that is already open rather than sending another request", async () => {
     expect.assertions(2);
     await ensureDataDir(dataDir);
-    await writeStoredSession(dataDir.cookies, STORED);
+    await writeStoredSession(account.cookies, STORED);
     const status = accountStatus(true);
     const browser = session(true, { fetch: status.fetch });
     await browser.use(touch);

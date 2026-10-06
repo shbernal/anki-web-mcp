@@ -5,7 +5,7 @@ import { z } from "zod";
 import type { PollOptions } from "../src/ankiweb/share.js";
 import type { SharedDecks } from "../src/ankiweb/shared.js";
 import { BrowserSession } from "../src/browser/session.js";
-import type { DataDir } from "../src/data-dir.js";
+import { accountPaths, type DataDir, DEFAULT_ACCOUNT } from "../src/data-dir.js";
 import { createServer } from "../src/server.js";
 import { fakeContext, type Respond } from "./fake-context.js";
 
@@ -43,6 +43,7 @@ export async function connectedClient({
   const fake = fakeContext(cookies, respond);
   const session = new BrowserSession({
     dataDir,
+    account: accountPaths(dataDir, DEFAULT_ACCOUNT),
     launch: async () => fake.context,
     checkLoggedIn: async () => loggedIn,
     fetch: async () => new Response(loggedIn ? LOGGED_IN_BODY : new Uint8Array()),

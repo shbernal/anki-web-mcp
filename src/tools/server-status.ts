@@ -39,12 +39,13 @@ export function registerServerStatus(
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     guarded("server_status", async ({ validate }) => {
-      const stored = (await checkDataDir(dataDir.root))
-        ? await readStoredSession(dataDir.cookies)
+      const { account } = session;
+      const stored = (await checkDataDir(account.dir))
+        ? await readStoredSession(account.cookies)
         : undefined;
       const authenticated = validate === true ? await session.checkSignedIn() : undefined;
       // A validation that just succeeded rewrote the file, so read it again.
-      const latest = authenticated === true ? await readStoredSession(dataDir.cookies) : stored;
+      const latest = authenticated === true ? await readStoredSession(account.cookies) : stored;
       const lastValidated = latest?.validatedAt;
       const status = {
         version,

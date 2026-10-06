@@ -38,7 +38,34 @@ others, is refused with the `chmod` that fixes it, the same rule `ssh` applies
 to `~/.ssh`. On Windows neither check applies. `downloads/` is created `0700`
 too but never checked, since it holds no secrets.
 
-`cookies.json` keeps only `ankiweb` and `has_auth` on `ankiweb.net` and
+### Accounts
+
+One data dir can hold several AnkiWeb sessions, each under a name the user
+picks:
+
+```
+<data dir>/
+  profile/  cookies.json  profile.lock     # the account named "default"
+  accounts/<name>/
+    profile/  cookies.json  profile.lock
+```
+
+The default account is the one at the root, so a session stored before
+accounts had names is the default account, and a single-account user never
+gets an `accounts/` directory: it is created with the first named account.
+Every account shares `downloads/`.
+
+A name is 1 to 32 lowercase letters, digits, `-` or `_`, starting with a letter
+or digit. `default` always means the root. AnkiWeb exposes no endpoint we know
+of that names the signed-in user, so the name is only the user's label, not an
+AnkiWeb username.
+
+The default account is listed once the root holds `profile/` or
+`cookies.json`, and a named one for each validly named directory under
+`accounts/`; anything else there is ignored and left alone. `accounts/` and
+each account's directory are created `0700` and checked like the data dir.
+
+on `ankiweb.net` and
 `ankiuser.net` (see [ankiweb.md](ankiweb.md#session)), with the fields
 Playwright's `addCookies` takes. It is rewritten after `--login` and after every
 successful session check, so it follows the profile. When the server launches
@@ -65,8 +92,9 @@ after the server's browser has run; `server_status` with `validate: true`
 covers that case.
 
 `anki-web-mcp --logout` deletes `profile/` and `cookies.json` and keeps
-`downloads/`. Each target is checked to be a direct child of the data dir
-before the recursive delete.
+`downloads/`. A named account's directory goes with them, unless something
+else was put in it. Each target is checked to be a direct child of its
+account's directory before the recursive delete.
 
 ## One browser per profile
 

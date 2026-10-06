@@ -2,7 +2,7 @@ import type { BrowserContext } from "playwright";
 
 import { checkLoggedIn } from "../ankiweb/account.js";
 import type { Fetch } from "../ankiweb/response-cache.js";
-import { type DataDir, ensureDataDir } from "../data-dir.js";
+import { type AccountPaths, type DataDir, ensureAccount } from "../data-dir.js";
 import { AuthRequiredError } from "./auth-required-error.js";
 import {
   authCookies,
@@ -25,6 +25,8 @@ const VALIDATION_TTL_MS = 30_000;
 
 export interface SessionOptions {
   readonly dataDir: DataDir;
+  /** Which of `dataDir`'s sessions this browser signs in with. */
+  readonly account: AccountPaths;
   readonly channel?: string | undefined;
   readonly idleMs?: number;
   /** Replaces Playwright in tests. */
@@ -57,6 +59,7 @@ export type AdoptCookies = (cookies: readonly StoredCookie[]) => Promise<boolean
  * cookie jar. A task must not call `use` again, or it waits on itself.
  */
 export class BrowserSession {
+  readonly account: AccountPaths;
   readonly #options: SessionOptions;
   #context: Promise<BrowserContext> | undefined;
   #active = 0;
@@ -69,6 +72,7 @@ export class BrowserSession {
 
   constructor(options: SessionOptions) {
     this.#options = options;
+    this.account = options.account;
   }
 
   /** When a session check last succeeded in this process, if one has. */
@@ -127,7 +131,7 @@ export class BrowserSession {
   async checkSignedIn(): Promise<boolean> {
     const signedIn = await this.#exclusive(() =>
       this.#context === undefined
-        ? checkStoredSession(this.#options.dataDir.cookies, this.#options.fetch ?? fetch)
+        ? checkStoredSession(this.#options.account.cookies, this.#options.fetch ?? fetch)
         : Promise.resolve(false),
     );
     return signedIn || this.isAuthenticated();
@@ -190,12 +194,12 @@ export class BrowserSession {
   }
 
   async #launch(): Promise<BrowserContext> {
-    const { dataDir, channel } = this.#options;
-    await ensureDataDir(dataDir);
+    const { dataDir, account, channel } = this.#options;
+    await ensureAccount(dataDir, account);
     const launch = this.#options.launch ?? launchContext;
-    const [context, unlock] = await openLocked(dataDir, this.#options.holder ?? "server", () =>
+    const [context, unlock] = await openLocked(account, this.#options.holder ?? "server", () =>
       launch({
-        profileDir: dataDir.profile,
+        profileDir: account.profile,
         downloadsDir: dataDir.downloads,
         headless: true,
         channel,
@@ -210,7 +214,7 @@ export class BrowserSession {
     });
     // A profile that lost its cookies, or a fresh one, starts from the export.
     if (!hasSessionCookie(await context.cookies([...SESSION_URLS]))) {
-      const stored = await readStoredSession(dataDir.cookies);
+      const stored = await readStoredSession(account.cookies);
       if (stored !== undefined) {
         await context.addCookies(stored.cookies);
       }
@@ -260,7 +264,7 @@ export class BrowserSession {
     const loggedIn = await check(context);
     this.#validated = { at: now, loggedIn };
     if (loggedIn) {
-      await exportSession(context, this.#options.dataDir, new Date(now));
+      await exportSession(context, this.#options.account, new Date(now));
     }
     return loggedIn;
   }
@@ -286,10 +290,10 @@ async function settled(turn: Promise<unknown>): Promise<void> {
 /** Refreshes `cookies.json` from a context whose session was just validated. */
 export async function exportSession(
   context: BrowserContext,
-  dataDir: DataDir,
+  account: AccountPaths,
   validatedAt: Readonly<Date>,
 ): Promise<void> {
-  await writeStoredSession(dataDir.cookies, {
+  await writeStoredSession(account.cookies, {
     validatedAt: validatedAt.toISOString(),
     cookies: authCookies(await context.cookies([...SESSION_URLS])),
   });

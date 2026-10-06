@@ -8,7 +8,14 @@ import { z } from "zod";
 
 import { SharedDecks } from "../src/ankiweb/shared.js";
 import { writeStoredSession } from "../src/browser/cookies.js";
-import { type DataDir, ensureDataDir, resolveDataDir } from "../src/data-dir.js";
+import {
+  type AccountPaths,
+  accountPaths,
+  type DataDir,
+  DEFAULT_ACCOUNT,
+  ensureDataDir,
+  resolveDataDir,
+} from "../src/data-dir.js";
 import { version } from "../src/version.js";
 import { connectedClient as connect, textOf } from "./connect.js";
 import { fakeFetch, fixtureResponse } from "./fake-fetch.js";
@@ -17,6 +24,7 @@ const VALIDATED_AT = "2026-10-06T12:00:00.000Z";
 
 let scratch: string;
 let dataDir: DataDir;
+let account: AccountPaths;
 
 const rating = z.object({ thumbsUp: z.number(), thumbsDown: z.number() });
 const ratedResults = z.object({ results: z.array(rating) });
@@ -37,6 +45,7 @@ async function connectedClient(sharedDecks = recordedSharedDecks()): Promise<Cli
 beforeEach(async () => {
   scratch = await mkdtemp(join(tmpdir(), "anki-web-mcp-"));
   dataDir = resolveDataDir(join(scratch, "data"));
+  account = accountPaths(dataDir, DEFAULT_ACCOUNT);
 });
 
 afterEach(async () => {
@@ -85,7 +94,7 @@ describe("server", () => {
   it("reports a stored session and when it was last validated", async () => {
     expect.assertions(1);
     await ensureDataDir(dataDir);
-    await writeStoredSession(dataDir.cookies, {
+    await writeStoredSession(account.cookies, {
       validatedAt: VALIDATED_AT,
       cookies: [
         {
