@@ -4,6 +4,7 @@
  * TypeScript (see NOTICE).
  */
 import type { AdoptCookies } from "../browser/session.js";
+import { DEFAULT_ACCOUNT, loginCommand } from "../data-dir.js";
 import { type BrowserName, type BrowserProfile, discoverProfiles } from "./discovery.js";
 import { extractCookies, lastSessionUse, type ReadPassword } from "./extract.js";
 import { readKeystorePassword } from "./keystore.js";
@@ -12,6 +13,8 @@ export interface ImportOptions {
   readonly discover?: (browser: BrowserName | undefined) => Promise<readonly BrowserProfile[]>;
   readonly readPassword?: ReadPassword;
   readonly now?: Date;
+  /** The account being signed in, named in the advice when nothing is found. */
+  readonly account?: string;
 }
 
 export class BrowserImportError extends Error {
@@ -34,7 +37,7 @@ export async function importFromBrowser(
   const candidates = await rankCandidates(await discover(browser), options.now ?? new Date());
   if (candidates.length === 0) {
     throw new BrowserImportError(
-      `No ${browser ?? "Chromium-family browser"} profile holds a live AnkiWeb session. Sign in to AnkiWeb there first, or run \`anki-web-mcp --login\`.`,
+      `No ${browser ?? "Chromium-family browser"} profile holds a live AnkiWeb session. Sign in to AnkiWeb there first, or run \`${loginCommand(options.account ?? DEFAULT_ACCOUNT)}\`.`,
     );
   }
   const failures: string[] = [];

@@ -6,6 +6,7 @@ import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import { ToolError } from "./errors.js";
 
 export const DATA_DIR_ENV = "ANKI_WEB_MCP_DATA_DIR";
+export const ACCOUNT_ENV = "ANKI_WEB_MCP_ACCOUNT";
 
 const APP_DIR = "anki-web-mcp";
 const LEGACY_DIR = ".anki-web-mcp";
@@ -53,6 +54,29 @@ export class DataDirError extends ToolError {
 
 export function isAccountName(name: string): boolean {
   return ACCOUNT_NAME.test(name);
+}
+
+/**
+ * The account `--account`, then `ANKI_WEB_MCP_ACCOUNT`, names, or `undefined`
+ * when neither does. Not validated: a caller reports a bad name its own way.
+ */
+export function chosenAccount(
+  flag: string | undefined,
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): string | undefined {
+  return flag ?? env[ACCOUNT_ENV];
+}
+
+/**
+ * The flags that sign `name` in. The default account's read as they did before
+ * accounts had names, so a single-account user never sees `--account`.
+ */
+export function loginFlags(name: string): string {
+  return name === DEFAULT_ACCOUNT ? "--login" : `--login --account ${name}`;
+}
+
+export function loginCommand(name: string): string {
+  return `anki-web-mcp ${loginFlags(name)}`;
 }
 
 /** Throws unless `name` can name an account. */

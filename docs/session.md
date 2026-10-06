@@ -83,9 +83,16 @@ polls once a second. Once the `ankiweb` cookie exists and
 `get-account-status` reports `logged_in`, it writes `cookies.json` and closes the
 window. It gives up after ten minutes, or as soon as the window is closed.
 
+`--login --account <name>`, or `ANKI_WEB_MCP_ACCOUNT`, signs in a named
+account instead, creating its directory; the flag wins over the variable.
+`--logout` and `--import-from-browser` take `--account` the same way.
+
 `anki-web-mcp --status` asks AnkiWeb about the session in `cookies.json` and
 exits 0 when it is signed in, 1 when nothing is stored or AnkiWeb turns it
-down. It sends the same `get-account-status` POST as `server_status` over
+down. With `--account` it checks that account. Without, it checks every
+account listed, one line each (`work: signed out; run --login --account work`),
+and exits 1 if any is not signed in. With only the default account stored, or
+nothing at all, it prints the one line it did before accounts had names. It sends the same `get-account-status` POST as `server_status` over
 `fetch`, so it opens no browser, takes no profile lock and can run beside the
 server. It never reads `profile/`, which can hold a newer cookie than the file
 after the server's browser has run; `server_status` with `validate: true`
@@ -119,6 +126,14 @@ parse, is taken over.
 anki-web-mcp --import-from-browser          # or: auto
 anki-web-mcp --import-from-browser brave
 ```
+
+A named account needs the browser named (`--import-from-browser brave
+--account work`). `auto` picks whichever profile used AnkiWeb last, which says
+nothing about whose session that is, so it signs in only the default account,
+and so does the automatic import in the server. Even a named browser can hold
+more than one AnkiWeb session across its profiles, and two accounts can end up
+holding the same session. Nothing detects that: AnkiWeb has no endpoint we know
+of that names the signed-in user.
 
 This reuses an AnkiWeb session the user already has in a Chromium-family
 browser: `chrome`, `chromium`, `brave`, `edge`, `vivaldi`, `opera` on Linux and

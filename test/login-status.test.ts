@@ -5,13 +5,16 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { readStoredSession, writeStoredSession } from "../src/browser/cookies.js";
-import { sessionStatus } from "../src/browser/login.js";
+import { sessionStatus, statusReport } from "../src/browser/login.js";
 import {
   type AccountPaths,
   accountPaths,
   type DataDir,
+  chosenAccount,
   DEFAULT_ACCOUNT,
+  ensureAccount,
   ensureDataDir,
+  loginCommand,
   resolveDataDir,
 } from "../src/data-dir.js";
 import { fakeFetch } from "./fake-fetch.js";
@@ -84,5 +87,95 @@ describe("sessionStatus", () => {
     await writeStoredSession(account.cookies, STORED);
     await expect(sessionStatus(account, accountStatus(false).fetch)).resolves.toBe("signed-out");
     await expect(readStoredSession(account.cookies)).resolves.toStrictEqual(STORED);
+  });
+});
+
+/** Stores a session for `name` whose cookie value is the name itself. */
+async function storeSession(name: string): Promise<void> {
+  const paths = accountPaths(dataDir, name);
+  await ensureAccount(dataDir, paths);
+  await writeStoredSession(paths.cookies, {
+    ...STORED,
+    cookies: [{ ...STORED.cookies[0], value: name }],
+  });
+}
+
+/** Signed in for exactly the accounts named, judged by the cookie each sends. */
+function signedInAs(...names: readonly string[]) {
+  return fakeFetch(async (_url, cookie) => {
+    const loggedIn = names.some((name) => cookie === `ankiweb=${name}`);
+    return new Response(loggedIn ? Uint8Array.of(0x08, 0x01) : new Uint8Array());
+  });
+}
+
+describe("statusReport", () => {
+  it("reads as before accounts had names on a fresh install", async () => {
+    expect.assertions(1);
+    await expect(statusReport(dataDir, undefined, signedInAs().fetch)).resolves.toStrictEqual({
+      lines: [`no session stored in ${dataDir.root}; run --login or --import-from-browser`],
+      signedIn: false,
+    });
+  });
+
+  it("reads as before accounts had names with the default account alone", async () => {
+    expect.assertions(2);
+    await storeSession(DEFAULT_ACCOUNT);
+    await expect(
+      statusReport(dataDir, undefined, signedInAs(DEFAULT_ACCOUNT).fetch),
+    ).resolves.toStrictEqual({
+      lines: [`signed in to AnkiWeb; session stored in ${dataDir.root}`],
+      signedIn: true,
+    });
+    await expect(statusReport(dataDir, undefined, signedInAs().fetch)).resolves.toStrictEqual({
+      lines: ["AnkiWeb turned down the stored session; run --login"],
+      signedIn: false,
+    });
+  });
+
+  it("checks every account, a line each, and fails if any is not signed in", async () => {
+    expect.assertions(2);
+    await storeSession(DEFAULT_ACCOUNT);
+    await storeSession("work");
+    await ensureAccount(dataDir, accountPaths(dataDir, "home"));
+    const status = signedInAs(DEFAULT_ACCOUNT);
+    await expect(statusReport(dataDir, undefined, status.fetch)).resolves.toStrictEqual({
+      lines: [
+        "default: signed in",
+        "home: no session; run --login --account home",
+        "work: signed out; run --login --account work",
+      ],
+      signedIn: false,
+    });
+    expect(status.urls).toHaveLength(2);
+  });
+
+  it("checks only the account chosen, naming it in the advice", async () => {
+    expect.assertions(1);
+    await storeSession(DEFAULT_ACCOUNT);
+    const work = accountPaths(dataDir, "work");
+    await expect(
+      statusReport(dataDir, "work", signedInAs(DEFAULT_ACCOUNT).fetch),
+    ).resolves.toStrictEqual({
+      lines: [
+        `no session stored in ${work.dir}; run --login --account work or --import-from-browser <browser> --account work`,
+      ],
+      signedIn: false,
+    });
+  });
+});
+
+describe("account choice", () => {
+  it("takes the flag over the environment, and neither means none", () => {
+    expect.assertions(3);
+    const env = { ANKI_WEB_MCP_ACCOUNT: "home" };
+    expect(chosenAccount("work", env)).toBe("work");
+    expect(chosenAccount(undefined, env)).toBe("home");
+    expect(chosenAccount(undefined, {})).toBeUndefined();
+  });
+
+  it("names --account in the sign-in command for a named account only", () => {
+    expect.assertions(2);
+    expect(loginCommand(DEFAULT_ACCOUNT)).toBe("anki-web-mcp --login");
+    expect(loginCommand("work")).toBe("anki-web-mcp --login --account work");
   });
 });

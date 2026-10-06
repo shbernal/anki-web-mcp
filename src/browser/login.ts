@@ -7,9 +7,13 @@ import type { Fetch } from "../ankiweb/response-cache.js";
 import { LOGIN_URL } from "../ankiweb/urls.js";
 import {
   type AccountPaths,
+  accountPaths,
   checkDataDir,
   type DataDir,
+  DEFAULT_ACCOUNT,
   ensureAccount,
+  listAccounts,
+  loginFlags,
   removeSession,
 } from "../data-dir.js";
 import {
@@ -120,4 +124,63 @@ export async function sessionStatus(
     return "missing";
   }
   return (await checkStoredSession(account.cookies, fetcher)) ? "signed-in" : "signed-out";
+}
+
+/** What `--status` prints, a line each, and whether every account checked is signed in. */
+export interface StatusReport {
+  readonly lines: readonly string[];
+  readonly signedIn: boolean;
+}
+
+const WORDS: Readonly<Record<SessionState, string>> = {
+  "signed-in": "signed in",
+  "signed-out": "signed out",
+  missing: "no session",
+};
+
+/**
+ * Checks `chosen`, or with none chosen every stored account. With nothing but
+ * the default account stored, or nothing at all, it reads as it did before
+ * accounts had names.
+ */
+export async function statusReport(
+  dataDir: DataDir,
+  chosen: string | undefined,
+  fetcher: Fetch = fetch,
+): Promise<StatusReport> {
+  const names = chosen === undefined ? await listAccounts(dataDir) : [chosen];
+  const [only, ...others] = names.length === 0 ? [DEFAULT_ACCOUNT] : names;
+  if (only !== undefined && others.length === 0) {
+    const account = accountPaths(dataDir, only);
+    return describeOne(account, await sessionStatus(account, fetcher));
+  }
+  const lines: string[] = [];
+  let signedIn = true;
+  // One at a time, as the server spaces its own requests to AnkiWeb.
+  for (const name of names) {
+    const state = await sessionStatus(accountPaths(dataDir, name), fetcher);
+    signedIn &&= state === "signed-in";
+    lines.push(
+      state === "signed-in"
+        ? `${name}: ${WORDS[state]}`
+        : `${name}: ${WORDS[state]}; run ${loginFlags(name)}`,
+    );
+  }
+  return { lines, signedIn };
+}
+
+function describeOne(account: AccountPaths, state: SessionState): StatusReport {
+  const loginAgain = loginFlags(account.name);
+  const importFlags =
+    account.name === DEFAULT_ACCOUNT
+      ? "--import-from-browser"
+      : `--import-from-browser <browser> --account ${account.name}`;
+  if (state === "signed-in") {
+    return { lines: [`signed in to AnkiWeb; session stored in ${account.dir}`], signedIn: true };
+  }
+  const line =
+    state === "missing"
+      ? `no session stored in ${account.dir}; run ${loginAgain} or ${importFlags}`
+      : `AnkiWeb turned down the stored session; run ${loginAgain}`;
+  return { lines: [line], signedIn: false };
 }

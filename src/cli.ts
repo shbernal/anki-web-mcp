@@ -5,9 +5,15 @@ import { parseArgs } from "node:util";
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
 
 import { installBrowser } from "./browser/launch.js";
-import { login, logout, sessionStatus } from "./browser/login.js";
+import { login, logout, statusReport } from "./browser/login.js";
 import { BrowserSession } from "./browser/session.js";
-import { accountPaths, DEFAULT_ACCOUNT, resolveDataDir } from "./data-dir.js";
+import {
+  accountPaths,
+  chosenAccount,
+  DEFAULT_ACCOUNT,
+  isAccountName,
+  resolveDataDir,
+} from "./data-dir.js";
 import { BROWSER_NAMES, type BrowserName, isBrowserName } from "./import/discovery.js";
 import { importFromBrowser } from "./import/orchestrate.js";
 import { createServer } from "./server.js";
@@ -33,10 +39,11 @@ Serves MCP over stdio unless one of the first five options is given.
 
   --login                       sign in to AnkiWeb in a visible browser window
   --logout                      delete the stored session, keeping downloads
-  --status                      check the stored session with AnkiWeb; exits 1 if signed out
+  --status                      check the stored sessions with AnkiWeb; exits 1 if any is signed out
   --import-from-browser [name]  import the session from a local browser now
   --install-browser             download Playwright's Chromium
   --no-auto-import              never look in local browsers on its own
+  --account <name>              act on, or serve by default, that account; also ANKI_WEB_MCP_ACCOUNT
   --channel <name>              drive an installed browser, such as chrome
   --data-dir <path>             keep the session elsewhere; also ANKI_WEB_MCP_DATA_DIR
   -h, --help                    show this help`;
@@ -77,6 +84,7 @@ function parseCommandLine(args: readonly string[]) {
         "auto-import": { type: "boolean", default: true },
         "install-browser": { type: "boolean" },
         "data-dir": { type: "string" },
+        account: { type: "string" },
         channel: { type: "string" },
         help: { type: "boolean", short: "h" },
       },
@@ -98,14 +106,30 @@ function parseCommandLine(args: readonly string[]) {
 
 const values = parseCommandLine(process.argv.slice(ARGV_OFFSET));
 const dataDir = resolveDataDir(values["data-dir"]);
-const account = accountPaths(dataDir, DEFAULT_ACCOUNT);
+/** The account named on the command line or in the environment, if one is. */
+const chosen = chosenAccount(values.account);
+if (chosen !== undefined && !isAccountName(chosen)) {
+  exitWithUsage(
+    `--account takes 1 to 32 lowercase letters, digits, \`-\` or \`_\`, starting with a letter or digit`,
+  );
+}
+const account = accountPaths(dataDir, chosen ?? DEFAULT_ACCOUNT);
+const isDefault = account.name === DEFAULT_ACCOUNT;
 const { channel } = values;
 const importFrom = values["import-from-browser"];
 
 async function importSession(browser: BrowserName | undefined): Promise<void> {
+  // Auto picks whichever profile used AnkiWeb last, which says nothing about whose session it is.
+  if (browser === undefined && !isDefault) {
+    throw new UsageError(
+      `${IMPORT_FLAG} needs a browser named to sign in a named account: ${IMPORT_FLAG} <name> --account ${account.name}`,
+    );
+  }
   const session = new BrowserSession({ dataDir, account, channel, holder: "import" });
   try {
-    const label = await importFromBrowser(browser, (cookies) => session.adoptCookies(cookies));
+    const label = await importFromBrowser(browser, (cookies) => session.adoptCookies(cookies), {
+      account: account.name,
+    });
     console.error(`anki-web-mcp: imported the session from ${label}; stored in ${account.dir}`);
   } finally {
     await session.close();
@@ -113,17 +137,13 @@ async function importSession(browser: BrowserName | undefined): Promise<void> {
 }
 
 async function reportStatus(): Promise<void> {
-  const state = await sessionStatus(account);
-  if (state === "signed-in") {
-    console.error(`anki-web-mcp: signed in to AnkiWeb; session stored in ${account.dir}`);
-    return;
+  const { lines, signedIn } = await statusReport(dataDir, chosen);
+  for (const line of lines) {
+    console.error(`anki-web-mcp: ${line}`);
   }
-  console.error(
-    state === "missing"
-      ? `anki-web-mcp: no session stored in ${account.dir}; run --login or --import-from-browser`
-      : "anki-web-mcp: AnkiWeb turned down the stored session; run --login",
-  );
-  process.exitCode = 1;
+  if (!signedIn) {
+    process.exitCode = 1;
+  }
 }
 
 async function serve(): Promise<void> {
@@ -131,7 +151,11 @@ async function serve(): Promise<void> {
     dataDir,
     account,
     channel,
-    autoImport: values["auto-import"] ? (adopt) => importFromBrowser(undefined, adopt) : undefined,
+    // Only the default account imports on its own; see importSession.
+    autoImport:
+      values["auto-import"] && isDefault
+        ? (adopt) => importFromBrowser(undefined, adopt)
+        : undefined,
   });
   const handle = serveStdio(() => createServer({ dataDir, session }));
   console.error("anki-web-mcp: serving on stdio");

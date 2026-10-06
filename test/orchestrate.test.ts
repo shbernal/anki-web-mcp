@@ -67,6 +67,14 @@ describe("browser import", () => {
     expect(keyring).not.toHaveBeenCalled();
   });
 
+  it("names the account being signed in when nothing is found for it", async () => {
+    expect.assertions(1);
+    const adopt = vi.fn<(cookies: readonly StoredCookie[]) => Promise<boolean>>();
+    await expect(
+      importFromBrowser("brave", adopt, { discover: async () => [], account: "work" }),
+    ).rejects.toThrow("anki-web-mcp --login --account work");
+  });
+
   it("tries the most recently used profile first and falls through a rejection", async () => {
     expect.assertions(3);
     const older = await writeCookiesDb(scratch, {
