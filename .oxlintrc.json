@@ -110,7 +110,7 @@
           // Each tool module takes the server and registers itself on it.
           // Registering is a mutation, which is the one thing a readonly view
           // could not express, and the class is the SDK's to declare.
-          { "from": "package", "package": "@modelcontextprotocol/sdk", "name": "McpServer" },
+          { "from": "package", "package": "@modelcontextprotocol/server", "name": "McpServer" },
           { "from": "lib", "name": "Date" },
           { "from": "lib", "name": "Uint8Array" },
 

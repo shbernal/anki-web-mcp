@@ -62,9 +62,11 @@ context's request API. That request shares the browser's cookie jar, so the
 check needs no page render. A result is reused for 30 seconds, so a tool call
 that checks more than once costs one request.
 
-The stdio transport does not notice its client going away. So the CLI waits for
-stdin to end, then closes the server and the browser, because an open browser
-would keep the process alive.
+The stdio transport closes itself when the client closes stdin, but an open
+browser would still keep the process alive. So the CLI also waits for stdin to
+end, then closes the server and the browser. The browser cannot be released from
+a server's `onclose` instead, because `serveStdio` also builds and closes
+throwaway server instances to answer `server/discover` probes.
 
 `server_status` reports `version`, `dataDir`, `sessionStored` (whether
 `cookies.json` holds the session cookie) and `lastValidated`. With

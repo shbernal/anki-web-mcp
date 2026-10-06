@@ -1,4 +1,4 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
 import { hasSessionCookie, readStoredSession } from "../browser/cookies.js";
@@ -17,19 +17,19 @@ export function registerServerStatus(
       title: "Server status",
       description:
         "Report the server version, the data directory, and whether an AnkiWeb session is stored. With `validate`, also start the browser and ask AnkiWeb whether that session is still signed in.",
-      inputSchema: {
+      inputSchema: z.object({
         validate: z
           .boolean()
           .optional()
           .describe("Check the session against AnkiWeb. Starts a headless browser."),
-      },
-      outputSchema: {
+      }),
+      outputSchema: z.object({
         version: z.string(),
         dataDir: z.string(),
         sessionStored: z.boolean(),
         lastValidated: z.iso.datetime().optional(),
         authenticated: z.boolean().optional(),
-      },
+      }),
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     async ({ validate }) => {

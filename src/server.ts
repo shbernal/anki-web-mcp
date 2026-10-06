@@ -1,4 +1,4 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer } from "@modelcontextprotocol/server";
 
 import type { BrowserSession } from "./browser/session.js";
 import type { DataDir } from "./data-dir.js";

@@ -2,7 +2,7 @@
 import { once } from "node:events";
 import { parseArgs } from "node:util";
 
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { serveStdio } from "@modelcontextprotocol/server/stdio";
 
 import { installBrowser } from "./browser/launch.js";
 import { login } from "./browser/login.js";
@@ -39,13 +39,14 @@ try {
     process.exitCode = 1;
   } else {
     const session = new BrowserSession({ dataDir, channel });
-    const server = createServer({ dataDir, session });
-    await server.connect(new StdioServerTransport());
+    const handle = serveStdio(() => createServer({ dataDir, session }));
     console.error("anki-web-mcp: serving on stdio");
-    // The transport does not notice the client going away, and an open browser
-    // would keep the process alive after it has.
-    await once(process.stdin, "end");
-    await server.close();
+    // The transport closes itself when the client hangs up, but an open browser
+    // would still keep the process alive. The browser is shared rather than
+    // released from each server's onclose, because serveStdio also builds and
+    // closes throwaway instances for server/discover probes.
+    await Promise.race([once(process.stdin, "end"), once(process.stdin, "close")]);
+    await handle.close();
     await session.close();
   }
 } catch (error) {
