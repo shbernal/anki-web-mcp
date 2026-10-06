@@ -51,6 +51,35 @@
     "import/no-named-export": "off",
     "import/prefer-default-export": "off",
 
+    // Types and helpers are declared next to the code they describe, so exports
+    // are interleaved rather than gathered at the bottom. Both rules only
+    // relocate existing statements; neither changes what a module exposes.
+    "import/group-exports": "off",
+    "import/exports-last": "off",
+
+    // Rewriting a two-branch value selection as a statement forces a `let` that
+    // `init-declarations` then objects to, and adds a statement to functions
+    // this config caps. The expression form wins because it is the one the
+    // other rules are happy with.
+    "no-ternary": "off",
+
+    // Every loop this fires on is sequential on purpose: `--login` polls the
+    // browser until the user has signed in, and logout removes the profile and
+    // the cookie export one after the other. `Promise.all` would be wrong in
+    // both, not merely faster.
+    "no-await-in-loop": "off",
+
+    // A comment that wraps puts whatever word the wrap lands on at the start of
+    // a line, often a code name such as `protobuf` or `ankiweb`. Only the first
+    // line of a run is a sentence start, so only that one is held to the rule.
+    "capitalized-comments": ["error", "always", { "ignoreConsecutiveComments": true }],
+
+    // A budget rather than a ceiling, raised from the default ten. The functions
+    // near it walk one sequence end to end: the checks on a data dir, the steps
+    // of a sign-in. Splitting one to fit ten would leave halves with no name of
+    // their own. Anything past this has earned a second look.
+    "max-statements": ["error", 15],
+
     // Top-level helpers are `function` declarations, so a
     // module reads in the order it tells its story rather than the order a
     // `const` would force. Callbacks stay arrows.
@@ -81,9 +110,83 @@
           // Each tool module takes the server and registers itself on it.
           // Registering is a mutation, which is the one thing a readonly view
           // could not express, and the class is the SDK's to declare.
-          { "from": "package", "package": "@modelcontextprotocol/sdk", "name": "McpServer" }
+          { "from": "package", "package": "@modelcontextprotocol/sdk", "name": "McpServer" },
+          { "from": "lib", "name": "Date" },
+          { "from": "lib", "name": "Uint8Array" },
+
+          // Handles on a live browser. Opening a page, setting a cookie or
+          // sending a request through one changes the browser's state, so no
+          // use of them is a read, and the classes are Playwright's to declare.
+          { "from": "package", "package": "playwright-core", "name": "BrowserContext" },
+          { "from": "package", "package": "playwright-core", "name": "APIRequestContext" },
+
+          // The server's one browser, handed to each tool that needs it. Using
+          // it launches, reuses or closes that browser, which is a mutation.
+          { "from": "file", "name": "BrowserSession" }
         ]
       }
     ]
-  }
+  },
+  "overrides": [
+    {
+      // `describe`/`it` callbacks are declarative blocks, not functions with
+      // logic, so a suite's length and statement count track how many cases it
+      // covers. Splitting a cohesive suite to fit a budget would make the tests
+      // worse rather than smaller.
+      "files": ["test/**"],
+      "rules": {
+        "max-lines-per-function": "off",
+        "max-statements": "off",
+        "vitest/max-expects": "off",
+
+        // Each suite that touches the disk gets a fresh scratch directory from a
+        // module-level `beforeEach` and loses it in `afterEach`, so every
+        // `describe` in the file shares one setup instead of repeating it.
+        "vitest/no-hooks": "off",
+        "vitest/require-top-level-describe": "off",
+
+        // The scratch directory is handed to a suite by `beforeEach`, so there
+        // is no value to initialize it with at the point of declaration.
+        "init-declarations": "off",
+
+        // Both contradict `vitest/prefer-strict-boolean-matchers`, which is also
+        // on and rewrites the result straight back. The strict matcher wins:
+        // these assertions are about predicates that return exactly `true` or
+        // `false`, and `toBeFalsy` would also pass on `undefined`, which is the
+        // bug worth catching.
+        "vitest/prefer-to-be-falsy": "off",
+        "vitest/prefer-to-be-truthy": "off",
+
+        // The numbers in a suite are `expect.assertions` counts and the file
+        // modes under test. A name for `0o700` would only restate it, and the
+        // count is read against the `expect` calls below it, not as a value.
+        "no-magic-numbers": "off",
+
+        // The fakes stand in for Playwright's async API and have nothing to
+        // wait on. An `async` arrow is the shortest way to return a promise of
+        // a value, and `Promise.resolve` around each one would add only noise.
+        "require-await": "off",
+        "typescript/require-await": "off",
+
+        // `valid-title` wants a string and this rule wants the function itself,
+        // so no title satisfies both. A string is what the reporter prints the
+        // same way for a function, a class and a behavior.
+        "vitest/prefer-describe-function-title": "off",
+
+        // A suite that drives the server end to end imports the framework, the
+        // modules it wires together and the fakes that stand in for the browser.
+        // The count tracks what is being integrated, which is the point.
+        "import/max-dependencies": "off"
+      }
+    },
+    {
+      // The fake implements the four members of `BrowserContext` the session
+      // calls, out of several dozen. Asserting the rest is the point of a fake;
+      // implementing them would be a second Playwright.
+      "files": ["test/fake-context.ts"],
+      "rules": {
+        "typescript/no-unsafe-type-assertion": "off"
+      }
+    }
+  ]
 }

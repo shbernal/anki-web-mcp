@@ -1,10 +1,17 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
+import type { BrowserSession } from "./browser/session.js";
+import type { DataDir } from "./data-dir.js";
 import { registerServerStatus } from "./tools/server-status.js";
 import { version } from "./version.js";
 
-export function createServer(): McpServer {
+export interface ServerOptions {
+  readonly dataDir: DataDir;
+  readonly session: BrowserSession;
+}
+
+export function createServer({ dataDir, session }: ServerOptions): McpServer {
   const server = new McpServer({ name: "anki-web-mcp", version });
-  registerServerStatus(server);
+  registerServerStatus(server, dataDir, session);
   return server;
 }
