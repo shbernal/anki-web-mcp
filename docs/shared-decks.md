@@ -78,3 +78,25 @@ down, then by thumbs up. AnkiWeb's own ranking for that sort is not known.
   nothing is written and the error quotes what came back. A transfer that fails
   part way removes its file.
 - **Add-ons** have no download key and are refused.
+
+## Converting to Markdown
+
+`convert_deck_to_markdown` takes an absolute path to a local `.apkg`, such as
+one `download_shared_deck` saved, and writes it as
+[Flashcard Markdown](https://github.com/shbernal/flashcard-md-spec) through
+`@ankimd/core`'s `readDeck`, the same conversion as `ankimd extract`. Nothing
+goes over the network.
+
+- **Layout:** a new folder named after the package, beside it unless the call
+  names an existing absolute directory, holding `<name>.md` and the images its
+  cards use under `.images/`. A folder already taken becomes `name (1)` and so
+  on, and every file is created exclusively, so nothing is replaced.
+- **Title:** the call's `title`, or the filename with AnkiWeb's underscores as
+  spaces.
+- **What is lost:** only basic two-field notes become cards. Cloze notes and
+  note types with more fields are counted, one diagnostic per reason, and
+  scheduling is never carried over. The tool returns the first 50 diagnostics
+  and the total.
+- **Media names** come from a stranger's package, so one that would resolve
+  outside `.images/` is not written; a diagnostic names it and the card keeps
+  the reference as written.

@@ -22,7 +22,7 @@ anki-web-mcp is an MCP server for [AnkiWeb](https://ankiweb.net).
 It gives an assistant such as Claude the shared-deck catalogue and the decks synced to your account.
 
 - Search shared decks and read a listing: description, sample notes, reviews.
-- Download a shared deck's `.apkg` to disk.
+- Download a shared deck's `.apkg` to disk, and convert it to Markdown the assistant can read.
 - List the decks synced to your account.
 - Share one of your decks publicly, only after you have seen a preview and said yes.
 - Reuse the AnkiWeb session already signed in to Chrome, Brave, Edge and other Chromium browsers.
@@ -73,15 +73,16 @@ The server keeps the session in `~/.anki-web-mcp/`, created `0700`, and writes t
 
 ## Tools
 
-| tool                   | does                                                      |
-| ---------------------- | --------------------------------------------------------- |
-| `search_shared_decks`  | searches the shared catalogue, with sorting and paging    |
-| `get_shared_deck`      | one listing: description, tags, sample notes, reviews     |
-| `download_shared_deck` | saves a shared deck's `.apkg`, never overwriting a file   |
-| `list_my_decks`        | the decks synced to your account, with due counts         |
-| `share_deck`           | publishes one of your decks to the shared catalogue       |
-| `server_status`        | version, data directory, and whether the session is valid |
-| `close_session`        | closes the headless browser until the next call needs it  |
+| tool                       | does                                                      |
+| -------------------------- | --------------------------------------------------------- |
+| `search_shared_decks`      | searches the shared catalogue, with sorting and paging    |
+| `get_shared_deck`          | one listing: description, tags, sample notes, reviews     |
+| `download_shared_deck`     | saves a shared deck's `.apkg`, never overwriting a file   |
+| `convert_deck_to_markdown` | turns a local `.apkg` into Flashcard Markdown and images  |
+| `list_my_decks`            | the decks synced to your account, with due counts         |
+| `share_deck`               | publishes one of your decks to the shared catalogue       |
+| `server_status`            | version, data directory, and whether the session is valid |
+| `close_session`            | closes the headless browser until the next call needs it  |
 
 `share_deck` publishes publicly under your account.
 Without `confirm: true` it only returns a preview, and the tool description tells the assistant to show you that preview and wait for your go-ahead.
@@ -124,7 +125,7 @@ flowchart LR
 
 - [docs/ankiweb.md](docs/ankiweb.md): every AnkiWeb endpoint used, as observed
 - [docs/session.md](docs/session.md): the data directory, signing in, browser import
-- [docs/shared-decks.md](docs/shared-decks.md): search, details and downloads
+- [docs/shared-decks.md](docs/shared-decks.md): search, details, downloads and conversion to Markdown
 - [docs/sharing.md](docs/sharing.md): the share flow and its confirmation
 - [docs/errors.md](docs/errors.md): what a failing tool returns, and request pacing
 - [NOTICE](NOTICE): the browser import is ported from [linkedin-mcp-server](https://github.com/stickerdaniel/linkedin-mcp-server)

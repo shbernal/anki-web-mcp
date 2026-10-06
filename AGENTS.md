@@ -46,3 +46,10 @@ process.
 A tool throws a `ToolError` when its message is written for the user, and
 anything else is logged and summarized (`docs/errors.md`). A new failure the
 user can act on gets a `ToolError` with the action in its message.
+
+## Markdown comes from `@ankimd/core`
+
+`convert_deck_to_markdown` is `readDeck` and `relocateImages` from
+`@ankimd/core`, the sibling package, used as any npm consumer would. What a note
+becomes, and what is reported as lost, is decided there; a change to that belongs
+in ankimd rather than here. This package only chooses where the files go.

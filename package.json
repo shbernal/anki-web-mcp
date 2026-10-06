@@ -38,6 +38,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@ankimd/core": "^0.0.6",
     "@modelcontextprotocol/server": "^2.3.1",
     "playwright": "^1.63.0",
     "zod": "^4.6.5"

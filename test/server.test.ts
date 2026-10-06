@@ -53,6 +53,7 @@ describe("server", () => {
       { name: "search_shared_decks" },
       { name: "get_shared_deck" },
       { name: "download_shared_deck" },
+      { name: "convert_deck_to_markdown" },
       { name: "list_my_decks" },
       {
         name: "share_deck",
