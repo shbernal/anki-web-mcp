@@ -3,12 +3,12 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import type { BrowserContext } from "playwright";
+import type { BrowserContext, Cookie } from "playwright";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AuthRequiredError } from "../src/browser/auth-required-error.js";
 import { readStoredSession, writeStoredSession } from "../src/browser/cookies.js";
-import { BrowserSession } from "../src/browser/session.js";
+import { BrowserSession, type SessionOptions } from "../src/browser/session.js";
 import { type DataDir, resolveDataDir } from "../src/data-dir.js";
 import { type FakeContext, fakeContext } from "./fake-context.js";
 
@@ -31,7 +31,7 @@ let dataDir: DataDir;
 let fake: FakeContext;
 let launches: number;
 
-function session(loggedIn = true): BrowserSession {
+function session(loggedIn = true, options: Partial<SessionOptions> = {}): BrowserSession {
   return new BrowserSession({
     dataDir,
     idleMs: IDLE_MS,
@@ -40,8 +40,12 @@ function session(loggedIn = true): BrowserSession {
       return fake.context;
     },
     checkLoggedIn: async () => loggedIn,
+    ...options,
   });
 }
+
+/** Signed in exactly when the jar holds a session cookie whose value is `good`. */
+const checkJar = async () => fake.jar.some((cookie: Readonly<Cookie>) => cookie.value === "good");
 
 beforeEach(async () => {
   scratch = await mkdtemp(join(tmpdir(), "anki-web-mcp-"));
@@ -106,5 +110,47 @@ describe("browser session", () => {
     expect(fake.closed()).toBe(true);
     await browser.use(touch);
     expect(launches).toBe(2);
+  });
+});
+
+describe("adopting imported cookies", () => {
+  it("keeps cookies AnkiWeb accepts and exports them", async () => {
+    expect.assertions(3);
+    const browser = session(true, { checkLoggedIn: checkJar });
+    await expect(browser.adoptCookies([{ ...SESSION_COOKIE, value: "good" }])).resolves.toBe(true);
+    expect(fake.jar.map((cookie: Readonly<Cookie>) => cookie.value)).toStrictEqual(["good"]);
+    const stored = await readStoredSession(dataDir.cookies);
+    expect(stored?.cookies.map((cookie) => cookie.value)).toStrictEqual(["good"]);
+  });
+
+  it("clears rejected cookies so the next candidate starts clean", async () => {
+    expect.assertions(2);
+    const browser = session(true, { checkLoggedIn: checkJar });
+    await expect(browser.adoptCookies([SESSION_COOKIE])).resolves.toBe(false);
+    expect(fake.jar).toStrictEqual([]);
+  });
+
+  it("imports once, the first time a call needs a session", async () => {
+    expect.assertions(3);
+    const autoImport = vi.fn<NonNullable<SessionOptions["autoImport"]>>(async (adopt) =>
+      adopt([{ ...SESSION_COOKIE, value: "good" }]),
+    );
+    const browser = session(true, { checkLoggedIn: checkJar, autoImport });
+    await expect(browser.useAuthenticated(async () => "ran")).resolves.toBe("ran");
+    await expect(browser.useAuthenticated(async () => "again")).resolves.toBe("again");
+    expect(autoImport).toHaveBeenCalledOnce();
+  });
+
+  it("says why the import failed, and does not retry it", async () => {
+    expect.assertions(3);
+    const autoImport = vi.fn<NonNullable<SessionOptions["autoImport"]>>(async () => {
+      throw new Error("No Chromium-family browser profile holds a live AnkiWeb session.");
+    });
+    const browser = session(false, { autoImport });
+    const call = browser.useAuthenticated(async () => "unreachable");
+    await expect(call).rejects.toThrow(AuthRequiredError);
+    await expect(call).rejects.toThrow(/holds a live AnkiWeb session.*--login/u);
+    await browser.useAuthenticated(async () => "unreachable").catch(() => "refused");
+    expect(autoImport).toHaveBeenCalledOnce();
   });
 });

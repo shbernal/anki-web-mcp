@@ -16,6 +16,10 @@ export function fakeContext(initial: readonly Readonly<Cookie>[] = []): FakeCont
     addCookies: async (cookies: readonly Readonly<Cookie>[]) => {
       jar.push(...cookies);
     },
+    clearCookies: async ({ domain }: { readonly domain: Readonly<RegExp> }) => {
+      const kept = jar.filter((cookie) => !domain.test(cookie.domain));
+      jar.splice(0, jar.length, ...kept);
+    },
     on: (_event: "close", listener: () => void) => {
       listeners.push(listener);
     },

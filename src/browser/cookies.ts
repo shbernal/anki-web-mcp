@@ -10,9 +10,13 @@ const JSON_INDENT = 2;
 
 /** The hosts that set the session; `ankiuser.net` mirrors it for the note editor. */
 export const SESSION_URLS = ["https://ankiweb.net", "https://ankiuser.net"] as const;
-const SESSION_DOMAINS = new Set(["ankiweb.net", "ankiuser.net"]);
-const SESSION_COOKIE = "ankiweb";
-const AUTH_COOKIES = new Set([SESSION_COOKIE, "has_auth"]);
+export const SESSION_HOSTS = ["ankiweb.net", "ankiuser.net"] as const;
+/** Matches a cookie domain on either session host, host-only or with a leading dot. */
+export const SESSION_DOMAIN_PATTERN = /^\.?(?:ankiweb|ankiuser)\.net$/u;
+export const SESSION_COOKIE = "ankiweb";
+export const AUTH_COOKIE_NAMES = [SESSION_COOKIE, "has_auth"] as const;
+const SESSION_DOMAINS = new Set<string>(SESSION_HOSTS);
+const AUTH_COOKIES = new Set<string>(AUTH_COOKIE_NAMES);
 
 const cookieSchema = z
   .object({

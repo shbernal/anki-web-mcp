@@ -43,6 +43,54 @@ window. It gives up after ten minutes, or as soon as the window is closed.
 `downloads/`. Each target is checked to be a direct child of the data dir
 before the recursive delete.
 
+## Importing from a local browser
+
+```sh
+anki-web-mcp --import-from-browser          # or: auto
+anki-web-mcp --import-from-browser brave
+```
+
+This reuses an AnkiWeb session the user already has in a Chromium-family
+browser: `chrome`, `chromium`, `brave`, `edge`, `vivaldi`, `opera` on Linux and
+macOS, plus `arc` and `helium` on macOS. Windows is not supported yet.
+
+Discovery looks in each browser's user-data dir (`~/.config/<browser>` or
+`$XDG_CONFIG_HOME` on Linux, `~/Library/Application Support/<browser>` on
+macOS) and in sibling channels such as `google-chrome-beta`. It lists `Default`
+and every `Profile N`, with the `Cookies` database under `Network/` or beside
+it. Opera keeps one profile at the root.
+
+Each database is copied to a private temporary directory along with its `-wal`
+and `-shm`, because the running browser holds a lock and recent writes may sit in
+the WAL. It is opened read-only through `node:sqlite`, and the copy is deleted
+afterwards. Ranking reads only plaintext columns, so no keystore is touched
+before a candidate is chosen. A profile is a candidate when it has an `ankiweb`
+cookie on `ankiweb.net` that has not expired and is encrypted as `v10` or
+`v11`. Candidates are tried newest `last_access_utc` first.
+
+Only the candidate being tried is decrypted. The key is PBKDF2-HMAC-SHA1 over
+the salt `saltysalt`, 16 bytes, from:
+
+| OS    | prefix | password                                                      | iterations |
+| ----- | ------ | ------------------------------------------------------------- | ---------- |
+| Linux | `v10`  | `peanuts`, Chromium's built-in one                            | 1          |
+| Linux | `v11`  | `secret-tool lookup application <browser>`                    | 1          |
+| macOS | `v10`  | `security find-generic-password -w -s <service> -a <account>` | 1003       |
+
+Values are AES-128-CBC with an IV of 16 spaces. From the store's
+`meta.version` 24 on, the plaintext opens with SHA256(`host_key`), which is
+stripped and doubles as a wrong-key check. A keystore read times out after ten
+seconds. On macOS it shows one keychain prompt per browser tried. `v20`
+(app-bound) values are skipped.
+
+The decrypted `ankiweb` and `has_auth` cookies go into the server's browser
+context, and the session check from [In the server](#in-the-server) decides.
+On success they are exported to `cookies.json` like after `--login`. On
+rejection they are cleared from the context and the next candidate is tried.
+
+The profile list, the keystore names and the decryption steps are ported from
+linkedin-mcp-server (Apache-2.0); see `NOTICE`.
+
 `--channel chrome` (or any other Playwright channel) drives an installed browser
 instead of Playwright's Chromium, for both the server and `--login`. When
 Chromium is missing, the error points to `anki-web-mcp --install-browser`, which
@@ -53,9 +101,11 @@ runs the bundled Playwright CLI's `install chromium`.
 `BrowserSession` launches headless on the first call that needs a browser, and
 concurrent calls share that one launch. It closes after five minutes with
 nothing in flight, and the next call relaunches it. The session never opens a
-headed window, since an MCP client over stdio may have no display. A tool that
-needs a signed-in session gets an `AuthRequiredError` that says to run
-`--login`.
+headed window, since an MCP client over stdio may have no display. The first time a
+tool needs a signed-in session and there is none, the server runs the browser
+import above with `auto`, once per process. If that fails too, the tool gets an
+`AuthRequiredError` that gives the import's reason and says to run `--login`.
+`--no-auto-import` turns the automatic attempt off.
 
 The session check is `POST /svc/account/get-account-status` sent through the
 context's request API. That request shares the browser's cookie jar, so the

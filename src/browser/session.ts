@@ -7,7 +7,9 @@ import {
   authCookies,
   hasSessionCookie,
   readStoredSession,
+  SESSION_DOMAIN_PATTERN,
   SESSION_URLS,
+  type StoredCookie,
   writeStoredSession,
 } from "./cookies.js";
 import { launchContext, type LaunchOptions } from "./launch.js";
@@ -24,7 +26,17 @@ export interface SessionOptions {
   /** Replaces Playwright in tests. */
   readonly launch?: (options: LaunchOptions) => Promise<BrowserContext>;
   readonly checkLoggedIn?: (context: BrowserContext) => Promise<boolean>;
+  /**
+   * Brings in a session from elsewhere, such as a local browser, handing each
+   * candidate to `adopt` until one is accepted. Tried once per process, the
+   * first time a call needs a session that is not there; leave it out to never
+   * try. Rejects with the reason nothing was imported.
+   */
+  readonly autoImport?: ((adopt: AdoptCookies) => Promise<unknown>) | undefined;
 }
+
+/** Resolves to whether AnkiWeb accepted the cookies, which are kept only if it did. */
+export type AdoptCookies = (cookies: readonly StoredCookie[]) => Promise<boolean>;
 
 /**
  * The server's one browser. The first call launches a headless persistent
@@ -38,6 +50,7 @@ export class BrowserSession {
   #active = 0;
   #idleTimer: NodeJS.Timeout | undefined;
   #validated: { readonly at: number; readonly loggedIn: boolean } | undefined;
+  #imported: Promise<unknown> | undefined;
 
   constructor(options: SessionOptions) {
     this.#options = options;
@@ -62,10 +75,14 @@ export class BrowserSession {
   useAuthenticated<Result>(task: (context: BrowserContext) => Promise<Result>): Promise<Result> {
     return this.use(async (context) => {
       if (!(await this.#isAuthenticated(context))) {
-        throw new AuthRequiredError();
+        await this.#importOnce(context);
       }
       return task(context);
     });
+  }
+
+  adoptCookies(cookies: readonly StoredCookie[]): Promise<boolean> {
+    return this.use((context) => this.#adopt(context, cookies));
   }
 
   isAuthenticated(): Promise<boolean> {
@@ -130,6 +147,39 @@ export class BrowserSession {
       }
     }
     return context;
+  }
+
+  /**
+   * Throws unless the auto-import, run at most once per process, left a session
+   * that is still signed in. A later call finds the first one's outcome.
+   */
+  async #importOnce(context: BrowserContext): Promise<void> {
+    const { autoImport } = this.#options;
+    if (autoImport === undefined) {
+      throw new AuthRequiredError();
+    }
+    this.#imported ??= autoImport((cookies) => this.#adopt(context, cookies));
+    try {
+      await this.#imported;
+    } catch (error) {
+      throw new AuthRequiredError(error instanceof Error ? error.message : String(error));
+    }
+    // Answered from the cache right after an import; a session imported
+    // earlier may have lapsed since.
+    if (!(await this.#isAuthenticated(context))) {
+      throw new AuthRequiredError();
+    }
+  }
+
+  async #adopt(context: BrowserContext, cookies: readonly StoredCookie[]): Promise<boolean> {
+    await context.addCookies(cookies);
+    this.#validated = undefined;
+    if (await this.#isAuthenticated(context)) {
+      return true;
+    }
+    // Cleared so the next candidate is judged on its own cookies alone.
+    await context.clearCookies({ domain: SESSION_DOMAIN_PATTERN });
+    return false;
   }
 
   async #isAuthenticated(context: BrowserContext): Promise<boolean> {
