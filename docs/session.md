@@ -10,11 +10,11 @@ to that file alone.
 `~/.anki-web-mcp/` by default, or `--data-dir <path>`, or
 `ANKI_WEB_MCP_DATA_DIR`, with the flag winning over the variable.
 
-| path           | holds                                                    |
-| -------------- | -------------------------------------------------------- |
-| `profile/`     | Playwright's persistent user-data dir                    |
-| `cookies.json` | the auth cookies and when the session was last validated |
-| `downloads/`   | the browser's download target                            |
+| path           | holds                                                      |
+| -------------- | ---------------------------------------------------------- |
+| `profile/`     | Playwright's persistent user-data dir                      |
+| `cookies.json` | the auth cookies and when the session was last validated   |
+| `downloads/`   | where `download_shared_deck` saves when given no directory |
 
 The directory is created `0700` and `cookies.json` is written `0600`, through a
 temporary file and a rename. A data dir owned by another user, or one whose
@@ -122,3 +122,9 @@ throwaway server instances to answer `server/discover` probes.
 `cookies.json` holds the session cookie) and `lastValidated`. With
 `validate: true` it also starts the browser, checks the session against AnkiWeb
 and adds `authenticated`.
+
+`list_my_decks` posts `deck-list-info` the same way, after the same session
+check, and flattens the tree so each parent comes before its subdecks. Each
+deck carries its full `Parent::Child` name: a node's name is joined to its
+parent's unless it already starts with it, which covers either way AnkiWeb
+might send subdeck names.

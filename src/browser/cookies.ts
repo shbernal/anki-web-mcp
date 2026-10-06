@@ -63,11 +63,19 @@ export function authCookies(cookies: readonly Readonly<Cookie>[]): readonly Stor
     }));
 }
 
+function isSessionCookie(cookie: Readonly<Cookie>): boolean {
+  return cookie.name === SESSION_COOKIE && bareDomain(cookie.domain) === "ankiweb.net";
+}
+
 /** `ankiweb` on `ankiweb.net` alone is enough for every session-only call. */
 export function hasSessionCookie(cookies: readonly Readonly<Cookie>[]): boolean {
-  return cookies.some(
-    (cookie) => cookie.name === SESSION_COOKIE && bareDomain(cookie.domain) === "ankiweb.net",
-  );
+  return cookies.some((cookie) => isSessionCookie(cookie));
+}
+
+/** A `Cookie` header carrying the session, for a request sent outside the browser. */
+export function sessionCookieHeader(cookies: readonly Readonly<Cookie>[]): string | undefined {
+  const session = cookies.find((cookie) => isSessionCookie(cookie));
+  return session === undefined ? undefined : `${session.name}=${session.value}`;
 }
 
 export async function readStoredSession(path: string): Promise<StoredSession | undefined> {

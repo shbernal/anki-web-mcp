@@ -25,3 +25,10 @@ export function sharedItemInfoUrl(id: number): string {
 export function sharedSampleMediaUrl(id: number, file: string): string {
   return `${ANKIWEB_ORIGIN}/shared/mpreview/${id}/${encodeURIComponent(file)}`;
 }
+
+/** The `.apkg` itself. `key` is the listing's `download_key`, minted per request. */
+export function sharedDownloadUrl(id: number, key: string): string {
+  return `${ANKIWEB_ORIGIN}/svc/shared/download-deck/${id}?${new URLSearchParams([["t", key]])}`;
+}
+
+export const DECK_LIST_URL = `${ANKIWEB_ORIGIN}/svc/decks/deck-list-info`;

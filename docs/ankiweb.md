@@ -60,7 +60,8 @@ check showed up, in headless Chromium or in `curl`.
 
 ## Shared decks
 
-None of these need a session.
+None of these need a session, though downloads stop working without one after
+a few (see [Download](#download)).
 
 ### Search
 
@@ -155,8 +156,14 @@ The Download button fetches this URL, and the browser fires a real `download`
 event for it. The response is the `.apkg` itself (`application/octet-stream`,
 `content-disposition: attachment; filename=<Title_With_Underscores>.apkg`).
 
-- No session is needed, and a plain `fetch`/`curl` with no cookies gets the
-  same bytes. So a download is two HTTP calls with no page render.
+- **The first few need no session.** A plain `fetch`/`curl` with no cookies gets
+  the same bytes, so a download is two HTTP calls with no page render.
+- **Then AnkiWeb asks for one.** After a few anonymous downloads from one
+  address, the call returns `429` with the body "Please log in to download more
+  decks." The same URL and key, sent again with the `ankiweb` session cookie,
+  returns the deck. `item-info` kept answering `200` while downloads were
+  refused. How many anonymous downloads are allowed, and for how long, is not
+  known.
 - `t` is required. Without it the call returns `400` and "missing field `t`".
 - `download_key` has the shape of a JWT: the header segment decodes to
   `{"op":"sdd","iat":<unix seconds>,"jv":1}`. A key minted a few minutes earlier
@@ -220,6 +227,9 @@ DeckNode {
   creation time in milliseconds as its id (for example `1791280883007`).
 - **The empty Default deck is hidden:** it is left out of the tree once any
   other deck exists.
+- **Subdeck names** have not been seen, because the test account has none. Anki's
+  own deck tree names each node by its last component, so `Parent::Child` may
+  arrive as `Child` under `Parent`.
 - **Page layout:** each deck is a `button` with its name, next to an "Actions"
   `button` whose menu offers "Rename", "Share" and "Delete".
   - "Share" goes to `/decks/share/<deck_id>`.

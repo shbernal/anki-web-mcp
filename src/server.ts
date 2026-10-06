@@ -3,6 +3,8 @@ import { McpServer } from "@modelcontextprotocol/server";
 import { SharedDecks } from "./ankiweb/shared.js";
 import type { BrowserSession } from "./browser/session.js";
 import type { DataDir } from "./data-dir.js";
+import { registerDownload } from "./tools/download.js";
+import { registerMyDecks } from "./tools/my-decks.js";
 import { registerServerStatus } from "./tools/server-status.js";
 import { registerSharedDecks } from "./tools/shared.js";
 import { version } from "./version.js";
@@ -22,5 +24,7 @@ export function createServer({
   const server = new McpServer({ name: "anki-web-mcp", version });
   registerServerStatus(server, dataDir, session);
   registerSharedDecks(server, sharedDecks);
+  registerDownload(server, { shared: sharedDecks, session, dataDir });
+  registerMyDecks(server, session);
   return server;
 }

@@ -6,7 +6,10 @@ const MAX_ENTRIES = 50;
 const MAX_AGE = /(?:^|,)\s*max-age=(?<seconds>\d+)/u;
 
 /** The slice of `fetch` this needs, which a test can stand in for. */
-export type Fetch = (url: string) => Promise<Response>;
+export type Fetch = (
+  url: string,
+  init?: Readonly<{ headers?: Readonly<Record<string, string>> }>,
+) => Promise<Response>;
 
 export interface ResponseCacheOptions {
   readonly fetch?: Fetch;

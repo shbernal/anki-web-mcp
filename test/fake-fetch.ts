@@ -9,11 +9,11 @@ export interface FakeFetch {
 }
 
 /** Answers each request from `respond`, with no network behind it. */
-export function fakeFetch(respond: (url: string) => Promise<Response>): FakeFetch {
+export function fakeFetch(respond: (url: string, cookie?: string) => Promise<Response>): FakeFetch {
   const urls: string[] = [];
-  const fake = async (url: string): Promise<Response> => {
+  const fake: Fetch = async (url, init) => {
     urls.push(url);
-    return respond(url);
+    return respond(url, init?.headers?.cookie);
   };
   return { fetch: fake, urls };
 }

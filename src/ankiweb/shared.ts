@@ -1,4 +1,5 @@
 import { htmlToText } from "./html.js";
+import { AnkiWebHttpError } from "./http-error.js";
 import {
   decodeMessage,
   type Message,
@@ -8,9 +9,10 @@ import {
   readNumber,
   readString,
 } from "./protobuf.js";
-import { ResponseCache, type ResponseCacheOptions } from "./response-cache.js";
+import { type Fetch, ResponseCache, type ResponseCacheOptions } from "./response-cache.js";
 import {
   sharedDeckPageUrl,
+  sharedDownloadUrl,
   sharedItemInfoUrl,
   sharedSampleMediaUrl,
   sharedSearchUrl,
@@ -214,15 +216,41 @@ export function decodeItemInfo(id: number, body: Readonly<Uint8Array>): SharedDe
   );
 }
 
+export interface SharedDeckDownload {
+  readonly deck: { readonly id: number; readonly title: string };
+  /** The name AnkiWeb suggests in `content-disposition`, unsanitized, if it sent one. */
+  readonly suggestedFilename: string | undefined;
+  readonly body: ReadableStream<Uint8Array>;
+}
+
+const FILENAME_EXTENDED = /filename\*\s*=\s*(?:UTF-8|utf-8)''(?<name>[^;]+)/u;
+const FILENAME_PLAIN = /filename\s*=\s*(?:"(?<quoted>[^"]*)"|(?<bare>[^;]+))/u;
+
+/** The `filename` of a `content-disposition` header, preferring the RFC 5987 form. */
+export function dispositionFilename(header: string | null): string | undefined {
+  const extended = FILENAME_EXTENDED.exec(header ?? "")?.groups?.name;
+  if (extended !== undefined) {
+    try {
+      return decodeURIComponent(extended.trim());
+    } catch {
+      // A malformed escape falls through to the plain form.
+    }
+  }
+  const plain = FILENAME_PLAIN.exec(header ?? "")?.groups;
+  return (plain?.quoted ?? plain?.bare)?.trim();
+}
+
 /**
  * AnkiWeb's shared deck catalogue. Every call here is an anonymous GET, so none
  * of it touches the browser or needs a session.
  */
 export class SharedDecks {
   readonly #responses: ResponseCache;
+  readonly #fetch: Fetch;
 
   constructor(options: ResponseCacheOptions = {}) {
     this.#responses = new ResponseCache(options);
+    this.#fetch = options.fetch ?? fetch;
   }
 
   /** Every match in one list: AnkiWeb neither pages nor sorts searches. */
@@ -232,5 +260,31 @@ export class SharedDecks {
 
   async get(id: number): Promise<SharedDeckDetail> {
     return decodeItemInfo(id, await this.#responses.get(sharedItemInfoUrl(id)));
+  }
+
+  /**
+   * Starts downloading a deck's `.apkg`. The listing supplies the download key,
+   * and the response body is handed back unread, since a deck can run to
+   * hundreds of megabytes. Without `cookie`, the download is anonymous, which
+   * AnkiWeb allows only a few times before it answers 429.
+   */
+  async download(id: number, cookie?: string): Promise<SharedDeckDownload> {
+    const { kind, title, downloadKey } = await this.get(id);
+    if (kind !== "deck" || downloadKey === undefined) {
+      throw new Error(`Shared item ${id} is an add-on, not a deck; install it from inside Anki`);
+    }
+    const url = sharedDownloadUrl(id, downloadKey);
+    const response = await this.#fetch(
+      url,
+      cookie === undefined ? undefined : { headers: { cookie } },
+    );
+    if (!response.ok || response.body === null) {
+      throw new AnkiWebHttpError(response.status, await response.text());
+    }
+    return {
+      deck: { id, title },
+      suggestedFilename: dispositionFilename(response.headers.get("content-disposition")),
+      body: response.body,
+    };
   }
 }

@@ -2,17 +2,15 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
+import type { Client } from "@modelcontextprotocol/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { SharedDecks } from "../src/ankiweb/shared.js";
 import { writeStoredSession } from "../src/browser/cookies.js";
-import { BrowserSession } from "../src/browser/session.js";
 import { type DataDir, ensureDataDir, resolveDataDir } from "../src/data-dir.js";
-import { createServer } from "../src/server.js";
 import { version } from "../src/version.js";
-import { fakeContext } from "./fake-context.js";
+import { connectedClient as connect, textOf } from "./connect.js";
 import { fakeFetch, fixtureResponse } from "./fake-fetch.js";
 
 const VALIDATED_AT = "2026-10-06T12:00:00.000Z";
@@ -22,13 +20,6 @@ let dataDir: DataDir;
 
 const rating = z.object({ thumbsUp: z.number(), thumbsDown: z.number() });
 const ratedResults = z.object({ results: z.array(rating) });
-const textContent = z.array(z.object({ text: z.string() }));
-
-/** The text of a tool result's first content block. */
-function textOf(content: unknown): string | undefined {
-  return textContent.parse(content)[0]?.text;
-}
-
 /** Answers searches with the recorded `japanese` results and listings with the recorded deck. */
 function recordedSharedDecks(): SharedDecks {
   const fake = fakeFetch(async (url) =>
@@ -40,19 +31,7 @@ function recordedSharedDecks(): SharedDecks {
 }
 
 async function connectedClient(sharedDecks = recordedSharedDecks()): Promise<Client> {
-  const fake = fakeContext();
-  const session = new BrowserSession({
-    dataDir,
-    launch: async () => fake.context,
-    checkLoggedIn: async () => false,
-  });
-  const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
-  const client = new Client({ name: "test", version: "0.0.0" });
-  await Promise.all([
-    createServer({ dataDir, session, sharedDecks }).connect(serverSide),
-    client.connect(clientSide),
-  ]);
-  return client;
+  return connect({ dataDir, sharedDecks });
 }
 
 beforeEach(async () => {
@@ -73,6 +52,8 @@ describe("server", () => {
       { name: "server_status" },
       { name: "search_shared_decks" },
       { name: "get_shared_deck" },
+      { name: "download_shared_deck" },
+      { name: "list_my_decks" },
     ]);
     await client.close();
   });

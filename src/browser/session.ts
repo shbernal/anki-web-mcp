@@ -7,6 +7,7 @@ import {
   authCookies,
   hasSessionCookie,
   readStoredSession,
+  sessionCookieHeader,
   SESSION_DOMAIN_PATTERN,
   SESSION_URLS,
   type StoredCookie,
@@ -79,6 +80,20 @@ export class BrowserSession {
       }
       return task(context);
     });
+  }
+
+  /**
+   * A `Cookie` header carrying the signed-in session, for a request sent
+   * outside the browser, such as a download streamed straight to disk.
+   */
+  async sessionCookie(): Promise<string> {
+    const header = await this.useAuthenticated(async (context) =>
+      sessionCookieHeader(await context.cookies([...SESSION_URLS])),
+    );
+    if (header === undefined) {
+      throw new AuthRequiredError();
+    }
+    return header;
   }
 
   adoptCookies(cookies: readonly StoredCookie[]): Promise<boolean> {

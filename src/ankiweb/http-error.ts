@@ -1,4 +1,4 @@
-const HTTP_TOO_MANY_REQUESTS = 429;
+export const HTTP_TOO_MANY_REQUESTS = 429;
 
 /** A non-2xx answer from AnkiWeb, carrying the plain-text reason it sends with one. */
 export class AnkiWebHttpError extends Error {

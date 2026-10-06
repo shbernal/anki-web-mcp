@@ -3,7 +3,12 @@ import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 
 import { AnkiWebHttpError } from "../src/ankiweb/http-error.js";
-import { decodeItemInfo, decodeSearch, SharedDecks } from "../src/ankiweb/shared.js";
+import {
+  decodeItemInfo,
+  decodeSearch,
+  dispositionFilename,
+  SharedDecks,
+} from "../src/ankiweb/shared.js";
 import { fakeFetch, fixtureResponse } from "./fake-fetch.js";
 
 async function fixture(name: string): Promise<Buffer> {
@@ -130,5 +135,52 @@ describe("the shared deck catalogue", () => {
     expect(fake.urls).toStrictEqual([
       "https://ankiweb.net/svc/shared/item-info?sharedId=2183294427",
     ]);
+  });
+});
+
+describe("dispositionFilename", () => {
+  it("reads the plain, quoted and RFC 5987 forms", () => {
+    expect.assertions(3);
+    expect(dispositionFilename("attachment; filename=Japanese_Basic.apkg")).toBe(
+      "Japanese_Basic.apkg",
+    );
+    expect(dispositionFilename('attachment; filename="a b.apkg"')).toBe("a b.apkg");
+    expect(
+      dispositionFilename("attachment; filename=x.apkg; filename*=UTF-8''%E6%97%A5%E6%9C%AC.apkg"),
+    ).toBe("日本.apkg");
+  });
+});
+
+/** The recorded listing for its item-info request, and a zip header for anything else. */
+async function listingThenDeck(url: string): Promise<Response> {
+  if (url.includes("item-info")) {
+    return fixtureResponse("item-info-2183294427.bin");
+  }
+  return new Response(Uint8Array.of(0x50, 0x4b, 0x03, 0x04), {
+    headers: { "content-disposition": "attachment; filename=Japanese_Basic_Hiragana.apkg" },
+  });
+}
+
+describe("downloading a shared deck", () => {
+  it("fetches the deck with the listing's download key", async () => {
+    expect.assertions(3);
+    const fake = fakeFetch(listingThenDeck);
+    const download = await new SharedDecks({ fetch: fake.fetch }).download(2_183_294_427);
+    expect(download.deck).toStrictEqual({ id: 2_183_294_427, title: "Japanese Basic Hiragana" });
+    expect(download.suggestedFilename).toBe("Japanese_Basic_Hiragana.apkg");
+    expect(fake.urls[1]).toMatch(
+      /^https:\/\/ankiweb\.net\/svc\/shared\/download-deck\/2183294427\?t=eyJ/u,
+    );
+  });
+
+  it("refuses an add-on", async () => {
+    expect.assertions(2);
+    // ItemInfoResponse { available { title = "Add-on" } }, with no deck in it.
+    const addon = Uint8Array.of(0x0a, 0x08, 0x2a, 0x06, ...new TextEncoder().encode("Add-on"));
+    const fake = fakeFetch(async () => new Response(addon));
+    await expect(new SharedDecks({ fetch: fake.fetch }).download(1)).rejects.toThrow(
+      /is an add-on/u,
+    );
+    expect(fake.urls).toHaveLength(1);
   });
 });
