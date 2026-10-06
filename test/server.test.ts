@@ -76,6 +76,7 @@ describe("server", () => {
     expect(result.structuredContent).toStrictEqual({
       version,
       dataDir: dataDir.root,
+      downloadsDir: dataDir.downloads,
       sessionStored: false,
     });
     await client.close();
@@ -104,6 +105,7 @@ describe("server", () => {
     expect(result.structuredContent).toStrictEqual({
       version,
       dataDir: dataDir.root,
+      downloadsDir: dataDir.downloads,
       sessionStored: true,
       lastValidated: VALIDATED_AT,
       authenticated: false,

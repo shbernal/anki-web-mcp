@@ -1,16 +1,25 @@
+import { existsSync } from "node:fs";
 import { mkdir, rm, stat } from "node:fs/promises";
 import { homedir } from "node:os";
-import { basename, dirname, join, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 
 import { ToolError } from "./errors.js";
 
 export const DATA_DIR_ENV = "ANKI_WEB_MCP_DATA_DIR";
 
+const APP_DIR = "anki-web-mcp";
+const LEGACY_DIR = ".anki-web-mcp";
+
 const PRIVATE_DIR_MODE = 0o700;
 const GROUP_OR_OTHER_BITS = 0o077;
 
-/** Everything the server keeps on disk, under one directory only its owner can read. */
+/**
+ * Everything the server keeps on disk. The session lives under `root`, which
+ * only its owner can read; `downloads` is either inside it or, under the XDG
+ * layout, in a directory of its own.
+ */
 export interface DataDir {
+  /** Holds the session; checked and guarded as private. */
   readonly root: string;
   /** Playwright's persistent user-data dir. */
   readonly profile: string;
@@ -25,18 +34,60 @@ export class DataDirError extends ToolError {
   override name = "DataDirError";
 }
 
-export function resolveDataDir(
-  flag: string | undefined,
-  env: Readonly<Record<string, string | undefined>> = process.env,
-): DataDir {
-  const root = resolve(flag ?? env[DATA_DIR_ENV] ?? join(homedir(), ".anki-web-mcp"));
+/** What `resolveDataDir` reads from the machine, replaced in tests. */
+export interface Host {
+  readonly env?: Readonly<Record<string, string | undefined>>;
+  readonly platform?: NodeJS.Platform;
+  readonly home?: string;
+  readonly exists?: (path: string) => boolean;
+}
+
+/**
+ * `--data-dir`, then `ANKI_WEB_MCP_DATA_DIR`, keep everything under one root.
+ * Otherwise Linux follows the XDG base directory spec, keeping the session in
+ * the state dir and downloads in the data dir, unless a `~/.anki-web-mcp` from
+ * before that layout is there and the state dir is not. Every other platform
+ * uses `~/.anki-web-mcp`.
+ */
+export function resolveDataDir(flag: string | undefined, host: Host = {}): DataDir {
+  const {
+    env = process.env,
+    platform = process.platform,
+    home = homedir(),
+    exists = existsSync,
+  } = host;
+  const explicit = flag ?? env[DATA_DIR_ENV];
+  if (explicit !== undefined) {
+    return underOneRoot(resolve(explicit));
+  }
+  const legacy = join(home, LEGACY_DIR);
+  if (platform !== "linux") {
+    return underOneRoot(legacy);
+  }
+  const state = join(xdgBase(env.XDG_STATE_HOME, join(home, ".local", "state")), APP_DIR);
+  if (!exists(state) && exists(legacy)) {
+    return underOneRoot(legacy);
+  }
+  const data = join(xdgBase(env.XDG_DATA_HOME, join(home, ".local", "share")), APP_DIR);
+  return { ...sessionPaths(state), downloads: join(data, "downloads") };
+}
+
+/** The spec says a relative path in an XDG variable is invalid and to be ignored. */
+function xdgBase(value: string | undefined, fallback: string): string {
+  return value !== undefined && isAbsolute(value) ? value : fallback;
+}
+
+function sessionPaths(root: string): Omit<DataDir, "downloads"> {
   return {
     root,
     profile: join(root, "profile"),
     cookies: join(root, "cookies.json"),
     profileLock: join(root, "profile.lock"),
-    downloads: join(root, "downloads"),
   };
+}
+
+function underOneRoot(root: string): DataDir {
+  return { ...sessionPaths(root), downloads: join(root, "downloads") };
 }
 
 /**
@@ -67,6 +118,10 @@ export async function checkDataDir(root: string): Promise<boolean> {
   return true;
 }
 
+/**
+ * Creates the session root, private, and the downloads folder. Downloads hold
+ * no secrets, so they are created private but never checked.
+ */
 export async function ensureDataDir(dir: DataDir): Promise<void> {
   if (!(await checkDataDir(dir.root))) {
     await mkdir(dir.root, { recursive: true, mode: PRIVATE_DIR_MODE });

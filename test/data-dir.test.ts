@@ -14,6 +14,19 @@ import {
 } from "../src/data-dir.js";
 
 const PERMISSION_BITS = 0o777;
+const HOME = "/home/u";
+
+function nothing(): boolean {
+  return false;
+}
+
+function legacyOnly(path: string): boolean {
+  return path === `${HOME}/.anki-web-mcp`;
+}
+
+function legacyAndState(path: string): boolean {
+  return path.endsWith("anki-web-mcp");
+}
 
 let scratch: string;
 
@@ -26,12 +39,61 @@ afterEach(async () => {
 });
 
 describe("resolveDataDir", () => {
-  it("prefers the flag, then the environment, then the home directory", () => {
+  const linux = { platform: "linux", home: HOME, exists: nothing, env: {} } as const;
+
+  it("prefers the flag, then the environment, each keeping everything under one root", () => {
     expect.assertions(3);
     const env = { ANKI_WEB_MCP_DATA_DIR: "/from/env" };
-    expect(resolveDataDir("/from/flag", env).root).toBe("/from/flag");
-    expect(resolveDataDir(undefined, env).cookies).toBe("/from/env/cookies.json");
-    expect(resolveDataDir(undefined, {}).root).toMatch(/\.anki-web-mcp$/u);
+    expect(resolveDataDir("/from/flag", { ...linux, env }).root).toBe("/from/flag");
+    expect(resolveDataDir(undefined, { ...linux, env })).toStrictEqual({
+      root: "/from/env",
+      profile: "/from/env/profile",
+      cookies: "/from/env/cookies.json",
+      profileLock: "/from/env/profile.lock",
+      downloads: "/from/env/downloads",
+    });
+    expect(resolveDataDir(undefined, {}).root).toMatch(/anki-web-mcp$/u);
+  });
+
+  it("keeps the session in the XDG state dir and downloads in the data dir on Linux", () => {
+    expect.assertions(1);
+    expect(resolveDataDir(undefined, linux)).toStrictEqual({
+      root: "/home/u/.local/state/anki-web-mcp",
+      profile: "/home/u/.local/state/anki-web-mcp/profile",
+      cookies: "/home/u/.local/state/anki-web-mcp/cookies.json",
+      profileLock: "/home/u/.local/state/anki-web-mcp/profile.lock",
+      downloads: "/home/u/.local/share/anki-web-mcp/downloads",
+    });
+  });
+
+  it("follows XDG_STATE_HOME and XDG_DATA_HOME, ignoring relative or empty ones", () => {
+    expect.assertions(3);
+    const env = { XDG_STATE_HOME: "/xdg/state", XDG_DATA_HOME: "/xdg/data" };
+    const set = resolveDataDir(undefined, { ...linux, env });
+    expect(set.root).toBe("/xdg/state/anki-web-mcp");
+    expect(set.downloads).toBe("/xdg/data/anki-web-mcp/downloads");
+    const ignored = { XDG_STATE_HOME: "relative/state", XDG_DATA_HOME: "" };
+    expect(resolveDataDir(undefined, { ...linux, env: ignored })).toStrictEqual(
+      resolveDataDir(undefined, linux),
+    );
+  });
+
+  it("keeps using ~/.anki-web-mcp on Linux until the state dir exists", () => {
+    expect.assertions(2);
+    expect(resolveDataDir(undefined, { ...linux, exists: legacyOnly }).downloads).toBe(
+      "/home/u/.anki-web-mcp/downloads",
+    );
+    expect(resolveDataDir(undefined, { ...linux, exists: legacyAndState }).root).toBe(
+      "/home/u/.local/state/anki-web-mcp",
+    );
+  });
+
+  it("uses ~/.anki-web-mcp everywhere else, whatever XDG says", () => {
+    expect.assertions(1);
+    const env = { XDG_STATE_HOME: "/xdg/state" };
+    expect(resolveDataDir(undefined, { ...linux, platform: "darwin", env }).root).toBe(
+      "/home/u/.anki-web-mcp",
+    );
   });
 });
 
@@ -59,6 +121,21 @@ describe("ensureDataDir", () => {
   it("creates the directory private to its owner, with a downloads folder", async () => {
     expect.assertions(2);
     const dir = resolveDataDir(join(scratch, "data"));
+    await ensureDataDir(dir);
+    const root = await stat(dir.root);
+    const downloads = await stat(dir.downloads);
+    expect(root.mode & PERMISSION_BITS).toBe(0o700);
+    expect(downloads.isDirectory()).toBe(true);
+  });
+
+  it("creates a downloads folder that lives outside the session root", async () => {
+    expect.assertions(2);
+    const dir = resolveDataDir(undefined, {
+      platform: "linux",
+      home: scratch,
+      env: {},
+      exists: nothing,
+    });
     await ensureDataDir(dir);
     const root = await stat(dir.root);
     const downloads = await stat(dir.downloads);

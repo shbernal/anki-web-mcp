@@ -7,6 +7,15 @@ import { checkDataDir, type DataDir } from "../data-dir.js";
 import { guarded } from "../errors.js";
 import { version } from "../version.js";
 
+const STATUS = z.object({
+  version: z.string(),
+  dataDir: z.string().describe("Where the session is kept."),
+  downloadsDir: z.string().describe("Where downloads go when no directory is given."),
+  sessionStored: z.boolean(),
+  lastValidated: z.iso.datetime().optional(),
+  authenticated: z.boolean().optional(),
+});
+
 export function registerServerStatus(
   server: McpServer,
   dataDir: DataDir,
@@ -17,7 +26,7 @@ export function registerServerStatus(
     {
       title: "Server status",
       description:
-        "Report the server version, the data directory, and whether an AnkiWeb session is stored. With `validate`, also ask AnkiWeb whether that session is still signed in.",
+        "Report the server version, where the session and downloads are kept, and whether an AnkiWeb session is stored. With `validate`, also ask AnkiWeb whether that session is still signed in.",
       inputSchema: z.object({
         validate: z
           .boolean()
@@ -26,13 +35,7 @@ export function registerServerStatus(
             "Check the session against AnkiWeb. Starts a headless browser only when the stored cookie is missing or turned down.",
           ),
       }),
-      outputSchema: z.object({
-        version: z.string(),
-        dataDir: z.string(),
-        sessionStored: z.boolean(),
-        lastValidated: z.iso.datetime().optional(),
-        authenticated: z.boolean().optional(),
-      }),
+      outputSchema: STATUS,
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     guarded("server_status", async ({ validate }) => {
@@ -46,6 +49,7 @@ export function registerServerStatus(
       const status = {
         version,
         dataDir: dataDir.root,
+        downloadsDir: dataDir.downloads,
         sessionStored: latest !== undefined && hasSessionCookie(latest.cookies),
         ...(lastValidated === undefined ? {} : { lastValidated }),
         ...(authenticated === undefined ? {} : { authenticated }),

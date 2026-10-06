@@ -67,7 +67,8 @@ down, then by thumbs up. AnkiWeb's own ranking for that sort is not known.
   the browser session checks it is signed in, importing one if it can, and the
   download is sent again with its `ankiweb` cookie. With no session the error
   says why one is needed and how to sign in.
-- **Directory:** `<data dir>/downloads` unless the call names one, which has to
+- **Directory:** the `downloads/` directory from
+  [session.md](session.md#data-directory) unless the call names one, which has to
   be an absolute path to an existing directory. That is checked before anything
   is fetched.
 - **Filename:** the one in `content-disposition`, or the deck's title, or its

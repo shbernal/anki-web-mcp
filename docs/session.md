@@ -7,20 +7,36 @@ to that file alone.
 
 ## Data directory
 
-`~/.anki-web-mcp/` by default, or `--data-dir <path>`, or
-`ANKI_WEB_MCP_DATA_DIR`, with the flag winning over the variable.
+`--data-dir <path>`, or `ANKI_WEB_MCP_DATA_DIR`, puts everything under that one
+directory, with the flag winning over the variable. Without either, the
+location depends on the platform:
 
-| path           | holds                                                      |
+| file           | Linux                           | macOS, Windows     |
+| -------------- | ------------------------------- | ------------------ |
+| `profile/`     | `$XDG_STATE_HOME/anki-web-mcp/` | `~/.anki-web-mcp/` |
+| `cookies.json` | `$XDG_STATE_HOME/anki-web-mcp/` | `~/.anki-web-mcp/` |
+| `profile.lock` | `$XDG_STATE_HOME/anki-web-mcp/` | `~/.anki-web-mcp/` |
+| `downloads/`   | `$XDG_DATA_HOME/anki-web-mcp/`  | `~/.anki-web-mcp/` |
+
+| file           | holds                                                      |
 | -------------- | ---------------------------------------------------------- |
 | `profile/`     | Playwright's persistent user-data dir                      |
 | `cookies.json` | the auth cookies and when the session was last validated   |
-| `downloads/`   | where `download_shared_deck` saves when given no directory |
 | `profile.lock` | which process has `profile/` open, while one does          |
+| `downloads/`   | where `download_shared_deck` saves when given no directory |
 
-The directory is created `0700` and `cookies.json` is written `0600`, through a
-temporary file and a rename. A data dir owned by another user, or one whose
-mode grants anything to group or others, is refused with the `chmod` that fixes
-it, the same rule `ssh` applies to `~/.ssh`. On Windows neither check applies.
+`XDG_STATE_HOME` defaults to `~/.local/state` and `XDG_DATA_HOME` to
+`~/.local/share`. A relative or empty value is ignored, as the spec says. The
+session counts as state rather than data: losing it costs a sign-in, not work.
+On Linux, a `~/.anki-web-mcp/` left from before this layout is kept in use, as
+one directory, until the state dir exists. Nothing is moved.
+
+The directory holding the session (the "data dir" below) is created `0700`, and
+`cookies.json` is written `0600`, through a temporary file and a rename. A data
+dir owned by another user, or one whose mode grants anything to group or
+others, is refused with the `chmod` that fixes it, the same rule `ssh` applies
+to `~/.ssh`. On Windows neither check applies. `downloads/` is created `0700`
+too but never checked, since it holds no secrets.
 
 `cookies.json` keeps only `ankiweb` and `has_auth` on `ankiweb.net` and
 `ankiuser.net` (see [ankiweb.md](ankiweb.md#session)), with the fields
@@ -159,7 +175,8 @@ end, then closes the server and the browser. The browser cannot be released from
 a server's `onclose` instead, because `serveStdio` also builds and closes
 throwaway server instances to answer `server/discover` probes.
 
-`server_status` reports `version`, `dataDir`, `sessionStored` (whether
+`server_status` reports `version`, `dataDir` (where the session is),
+`downloadsDir`, `sessionStored` (whether
 `cookies.json` holds the session cookie) and `lastValidated`. With
 `validate: true` it also checks the session against AnkiWeb and adds
 `authenticated`. When no browser is open, that is the same `get-account-status`

@@ -92,7 +92,8 @@ npx anki-web-mcp@latest --login
 ```
 
 You type your password into AnkiWeb's own page, so it never passes through the server.
-The session stays in `~/.anki-web-mcp/`, created `0700`, and `--logout` deletes it.
+The session stays in `~/.local/state/anki-web-mcp/` on Linux and in `~/.anki-web-mcp/` elsewhere,
+created `0700`, and `--logout` deletes it.
 [docs/cli.md](docs/cli.md) lists every flag.
 
 ## Tools

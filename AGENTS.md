@@ -33,9 +33,12 @@ wait for the user. `docs/sharing.md` is the worked example.
 
 ## The data directory
 
-`~/.anki-web-mcp/` by default, `0700`, holding `profile/` (Playwright's
-persistent user-data dir), `profile.lock` (the process that has it open),
-`cookies.json` (`0600`, the auth cookies only) and `downloads/`. Anything new
+`$XDG_STATE_HOME/anki-web-mcp/` on Linux and `~/.anki-web-mcp/` elsewhere,
+`0700`, holding `profile/` (Playwright's persistent user-data dir),
+`profile.lock` (the process that has it open) and `cookies.json` (`0600`, the
+auth cookies only). `downloads/` sits beside them, except on Linux, where it is
+under `$XDG_DATA_HOME/anki-web-mcp/`. `resolveDataDir` in `src/data-dir.ts`
+decides. Anything new
 that launches a browser on `profile/` goes through `openLocked` or
 `lockProfile` in `src/browser/profile-lock.ts`. `docs/session.md` has the rules. Cookie values are never logged:
 `redact` in `src/errors.ts` masks them in every message and stack that leaves the
