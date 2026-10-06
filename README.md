@@ -98,8 +98,9 @@ Calling it with `confirm: true` also makes AnkiWeb's declaration that you own th
 | `--install-browser`            | downloads Playwright's Chromium                           |
 | `--channel <name>`             | drives an installed browser, such as `chrome`, instead    |
 | `--data-dir <path>`            | keeps the session elsewhere; also `ANKI_WEB_MCP_DATA_DIR` |
+| `-h`, `--help`                 | lists these flags                                         |
 
-Without `--login`, `--logout`, `--import-from-browser` or `--install-browser`, it serves MCP over stdio.
+Without `--login`, `--logout`, `--import-from-browser` or `--install-browser`, it serves MCP over stdio. A flag it does not know, or a missing value, prints one line and exits with status 2.
 
 ## How it works
 

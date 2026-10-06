@@ -27,31 +27,74 @@ function withImportDefault(args: readonly string[]): readonly string[] {
   });
 }
 
+const USAGE = `Usage: anki-web-mcp [options]
+
+Serves MCP over stdio unless one of the first four options is given.
+
+  --login                       sign in to AnkiWeb in a visible browser window
+  --logout                      delete the stored session, keeping downloads
+  --import-from-browser [name]  import the session from a local browser now
+  --install-browser             download Playwright's Chromium
+  --no-auto-import              never look in local browsers on its own
+  --channel <name>              drive an installed browser, such as chrome
+  --data-dir <path>             keep the session elsewhere; also ANKI_WEB_MCP_DATA_DIR
+  -h, --help                    show this help`;
+
+/** What the shell sees for a command line this CLI cannot run, as `sysexits` and most CLIs spell it. */
+const USAGE_EXIT_CODE = 2;
+
+/** A command line that cannot be run as given, reported in one line rather than a stack. */
+class UsageError extends Error {
+  override name = "UsageError";
+}
+
 function browserFlag(value: string): BrowserName | undefined {
   if (value === AUTO) {
     return undefined;
   }
   if (!isBrowserName(value)) {
-    throw new Error(`${IMPORT_FLAG} takes ${AUTO} or one of: ${BROWSER_NAMES.join(", ")}`);
+    throw new UsageError(`${IMPORT_FLAG} takes ${AUTO} or one of: ${BROWSER_NAMES.join(", ")}`);
   }
   return value;
 }
 
-const { values } = parseArgs({
-  args: [...withImportDefault(process.argv.slice(ARGV_OFFSET))],
-  options: {
-    login: { type: "boolean" },
-    logout: { type: "boolean" },
-    "import-from-browser": { type: "string" },
-    "auto-import": { type: "boolean", default: true },
-    "install-browser": { type: "boolean" },
-    "data-dir": { type: "string" },
-    channel: { type: "string" },
-  },
-  allowNegative: true,
-  strict: true,
-});
+function exitWithUsage(message: string): never {
+  console.error(`anki-web-mcp: ${message}`);
+  console.error("Run `anki-web-mcp --help` for the options.");
+  process.exit(USAGE_EXIT_CODE);
+}
 
+function parseCommandLine(args: readonly string[]) {
+  try {
+    return parseArgs({
+      args: [...withImportDefault(args)],
+      options: {
+        login: { type: "boolean" },
+        logout: { type: "boolean" },
+        "import-from-browser": { type: "string" },
+        "auto-import": { type: "boolean", default: true },
+        "install-browser": { type: "boolean" },
+        "data-dir": { type: "string" },
+        channel: { type: "string" },
+        help: { type: "boolean", short: "h" },
+      },
+      allowNegative: true,
+      strict: true,
+    }).values;
+  } catch (error) {
+    // `parseArgs` throws a plain `TypeError` with an `ERR_PARSE_ARGS_*` code.
+    if (
+      error instanceof TypeError &&
+      "code" in error &&
+      String(error.code).startsWith("ERR_PARSE_ARGS_")
+    ) {
+      exitWithUsage(error.message);
+    }
+    throw error;
+  }
+}
+
+const values = parseCommandLine(process.argv.slice(ARGV_OFFSET));
 const dataDir = resolveDataDir(values["data-dir"]);
 const { channel } = values;
 const importFrom = values["import-from-browser"];
@@ -85,7 +128,9 @@ async function serve(): Promise<void> {
 
 // Stdout carries the protocol, so anything human-readable goes to stderr.
 try {
-  if (values["install-browser"] === true) {
+  if (values.help === true) {
+    process.stdout.write(`${USAGE}\n`);
+  } else if (values["install-browser"] === true) {
     process.exitCode = await installBrowser();
   } else if (values.login === true) {
     await login(dataDir, channel);
@@ -98,6 +143,9 @@ try {
     await importSession(browserFlag(importFrom));
   }
 } catch (error) {
+  if (error instanceof UsageError) {
+    exitWithUsage(error.message);
+  }
   console.error(`anki-web-mcp: ${error instanceof Error ? error.message : String(error)}`);
   process.exitCode = 1;
 }
