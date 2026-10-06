@@ -4,9 +4,10 @@ import type { BrowserContext } from "playwright";
 
 import { checkLoggedIn } from "../ankiweb/account.js";
 import { LOGIN_URL } from "../ankiweb/urls.js";
-import { type DataDir, ensureDataDir } from "../data-dir.js";
+import { type DataDir, ensureDataDir, removeSession } from "../data-dir.js";
 import { hasSessionCookie, SESSION_URLS } from "./cookies.js";
 import { launchContext } from "./launch.js";
+import { assertProfileFree, lockProfile } from "./profile-lock.js";
 import { exportSession } from "./session.js";
 
 /** Ten minutes. */
@@ -20,6 +21,15 @@ const POLL_INTERVAL_MS = 1000;
  */
 export async function login(dataDir: DataDir, channel: string | undefined): Promise<void> {
   await ensureDataDir(dataDir);
+  const unlock = await lockProfile(dataDir, "login");
+  try {
+    await signIn(dataDir, channel);
+  } finally {
+    await unlock();
+  }
+}
+
+async function signIn(dataDir: DataDir, channel: string | undefined): Promise<void> {
   const context = await launchContext({
     profileDir: dataDir.profile,
     downloadsDir: dataDir.downloads,
@@ -63,4 +73,10 @@ async function waitForSignIn(
     await sleep(POLL_INTERVAL_MS);
   }
   throw new Error("Timed out waiting for the AnkiWeb sign-in");
+}
+
+/** Deletes the stored session, unless a browser has the profile open. */
+export async function logout(dataDir: DataDir): Promise<void> {
+  await assertProfileFree(dataDir);
+  await removeSession(dataDir);
 }

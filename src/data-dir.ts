@@ -16,6 +16,8 @@ export interface DataDir {
   readonly profile: string;
   /** Portable copy of the session cookies, refreshed on every validated login. */
   readonly cookies: string;
+  /** Names the process using `profile`, while one is. */
+  readonly profileLock: string;
   readonly downloads: string;
 }
 
@@ -32,6 +34,7 @@ export function resolveDataDir(
     root,
     profile: join(root, "profile"),
     cookies: join(root, "cookies.json"),
+    profileLock: join(root, "profile.lock"),
     downloads: join(root, "downloads"),
   };
 }

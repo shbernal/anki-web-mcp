@@ -15,6 +15,7 @@ to that file alone.
 | `profile/`     | Playwright's persistent user-data dir                      |
 | `cookies.json` | the auth cookies and when the session was last validated   |
 | `downloads/`   | where `download_shared_deck` saves when given no directory |
+| `profile.lock` | which process has `profile/` open, while one does          |
 
 The directory is created `0700` and `cookies.json` is written `0600`, through a
 temporary file and a rename. A data dir owned by another user, or one whose
@@ -42,6 +43,23 @@ window. It gives up after ten minutes, or as soon as the window is closed.
 `anki-web-mcp --logout` deletes `profile/` and `cookies.json` and keeps
 `downloads/`. Each target is checked to be a direct child of the data dir
 before the recursive delete.
+
+## One browser per profile
+
+Chromium's own `SingletonLock` does not protect the profile here: Playwright's
+headless shell never writes one, and a second launch on a profile in use
+succeeds, leaving two browsers writing one cookie store. So whatever opens
+`profile/` (the server's browser, `--login`, `--import-from-browser`) first
+creates `profile.lock` exclusively, holding its pid, what it is, and a random
+token. It removes the file when its browser closes, crashes included, and only
+while the token is still its own.
+
+A process that finds the lock held by another live pid stops with a
+`ProfileInUseError` saying which process has it and how to free it:
+`close_session` or five idle minutes for the server, finishing or closing the
+window for `--login`. `--logout` refuses the same way rather than delete a
+profile under a running browser. A lock whose pid is gone, or that does not
+parse, is taken over.
 
 ## Importing from a local browser
 

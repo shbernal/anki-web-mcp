@@ -5,9 +5,9 @@ import { parseArgs } from "node:util";
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
 
 import { installBrowser } from "./browser/launch.js";
-import { login } from "./browser/login.js";
+import { login, logout } from "./browser/login.js";
 import { BrowserSession } from "./browser/session.js";
-import { removeSession, resolveDataDir } from "./data-dir.js";
+import { resolveDataDir } from "./data-dir.js";
 import { BROWSER_NAMES, type BrowserName, isBrowserName } from "./import/discovery.js";
 import { importFromBrowser } from "./import/orchestrate.js";
 import { createServer } from "./server.js";
@@ -100,7 +100,7 @@ const { channel } = values;
 const importFrom = values["import-from-browser"];
 
 async function importSession(browser: BrowserName | undefined): Promise<void> {
-  const session = new BrowserSession({ dataDir, channel });
+  const session = new BrowserSession({ dataDir, channel, holder: "import" });
   try {
     const label = await importFromBrowser(browser, (cookies) => session.adoptCookies(cookies));
     console.error(`anki-web-mcp: imported the session from ${label}; stored in ${dataDir.root}`);
@@ -135,7 +135,7 @@ try {
   } else if (values.login === true) {
     await login(dataDir, channel);
   } else if (values.logout === true) {
-    await removeSession(dataDir);
+    await logout(dataDir);
     console.error(`anki-web-mcp: session removed from ${dataDir.root}`);
   } else if (importFrom === undefined) {
     await serve();

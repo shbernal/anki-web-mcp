@@ -10,7 +10,7 @@ assistant can act on.
   as is. The errors this server anticipates all extend it:
   `AuthRequiredError` (says to run `--login`), `BrowserMissingError` (says to
   run `--install-browser`), `AnkiWebHttpError`, `InvalidSharedIdError`,
-  `DataDirError`, `DownloadError`, and the plain `ToolError`s the tools throw
+  `DataDirError`, `ProfileInUseError` (names the process holding the browser profile), `DownloadError`, and the plain `ToolError`s the tools throw
   for an unknown or ambiguous deck.
 - **A payload that does not decode** (`ProtobufError`) is the first sign that
   AnkiWeb changed. The message says so and links the issue tracker.

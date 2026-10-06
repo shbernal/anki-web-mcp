@@ -14,6 +14,7 @@ import {
   writeStoredSession,
 } from "./cookies.js";
 import { launchContext, type LaunchOptions } from "./launch.js";
+import { openLocked, type ProfileHolder } from "./profile-lock.js";
 
 /** Five minutes. */
 const DEFAULT_IDLE_MS = 300_000;
@@ -34,6 +35,8 @@ export interface SessionOptions {
    * try. Rejects with the reason nothing was imported.
    */
   readonly autoImport?: ((adopt: AdoptCookies) => Promise<unknown>) | undefined;
+  /** Who the profile lock names while the browser is open; `server` by default. */
+  readonly holder?: ProfileHolder;
 }
 
 /** Resolves to whether AnkiWeb accepted the cookies, which are kept only if it did. */
@@ -56,6 +59,7 @@ export class BrowserSession {
   #idleTimer: NodeJS.Timeout | undefined;
   #validated: { readonly at: number; readonly loggedIn: boolean } | undefined;
   #imported: Promise<unknown> | undefined;
+  #unlock: (() => Promise<void>) | undefined;
   /** Settles when the last call queued so far has finished. */
   #queue: Promise<void> = Promise.resolve();
 
@@ -131,6 +135,7 @@ export class BrowserSession {
       const opened = await context;
       await opened.close();
     }
+    await this.#unlock?.();
   }
 
   /** Runs `task` after every call queued before it, whether those succeeded or not. */
@@ -169,15 +174,20 @@ export class BrowserSession {
     const { dataDir, channel } = this.#options;
     await ensureDataDir(dataDir);
     const launch = this.#options.launch ?? launchContext;
-    const context = await launch({
-      profileDir: dataDir.profile,
-      downloadsDir: dataDir.downloads,
-      headless: true,
-      channel,
-    });
+    const [context, unlock] = await openLocked(dataDir, this.#options.holder ?? "server", () =>
+      launch({
+        profileDir: dataDir.profile,
+        downloadsDir: dataDir.downloads,
+        headless: true,
+        channel,
+      }),
+    );
+    this.#unlock = unlock;
     context.on("close", () => {
       this.#context = undefined;
       this.#validated = undefined;
+      // A browser that exits on its own, such as on a crash, frees the profile too.
+      void unlock();
     });
     // A profile that lost its cookies, or a fresh one, starts from the export.
     if (!hasSessionCookie(await context.cookies([...SESSION_URLS]))) {
