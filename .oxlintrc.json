@@ -1,0 +1,91 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "oxc", "import", "vitest", "promise"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "error",
+    "pedantic": "error",
+    "style": "error"
+  },
+  "ignorePatterns": ["dist/", "node_modules/", "coverage/", "**/*.d.ts"],
+  "rules": {
+    // Conventions shared with the three sibling packages. Each is a decision
+    // they already made and this one holds to.
+    "typescript/consistent-type-imports": [
+      "warn",
+      { "prefer": "type-imports", "fixStyle": "inline-type-imports" }
+    ],
+    "typescript/explicit-function-return-type": "off",
+    "typescript/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+    "import/extensions": ["error", "ignorePackages", { "ts": "never" }],
+
+    // Node-only package, and `node:` says so at the import rather than in prose.
+    // Not in any enabled category, so it has to be named to have any effect.
+    "unicorn/prefer-node-protocol": "error",
+
+    // `sortImports` in .oxfmtrc.json already orders imports and oxfmt rewrites on
+    // every commit. Leaving this on means the formatter and the linter each
+    // impose a different order and fight over the same lines.
+    "sort-imports": "off",
+
+    // `consistent-type-imports` above is set to `inline-type-imports`; this rule
+    // demands the opposite. Leaving both on makes the two fixers undo each other.
+    "import/consistent-type-specifier-style": "off",
+
+    // oxlint defaults `one-var` to "always", which would collapse every run of
+    // consecutive declarations into one comma-chained statement. One binding per
+    // statement is the convention here, so the rule stays on pointed at it.
+    "one-var": ["error", "never"],
+
+    // oxfmt normalizes hexadecimal literals to lowercase while this rule wants
+    // them uppercase. The formatter owns how a literal is spelled.
+    "unicorn/number-literal-case": "off",
+
+    // This is a local Node server: it reads the filesystem, spawns a browser and
+    // speaks over stdio. The rule exists to keep browser bundles free of
+    // builtins, which is the opposite of the target here.
+    "import/no-nodejs-modules": "off",
+
+    // Modules name what they export (`createServer`, `registerServerStatus`),
+    // and the tool modules are imported side by side into `server.ts`. A single
+    // default per file would make every import site invent the name.
+    "import/no-named-export": "off",
+    "import/prefer-default-export": "off",
+
+    // Top-level helpers are `function` declarations, as in `pdfanki`, so a
+    // module reads in the order it tells its story rather than the order a
+    // `const` would force. Callbacks stay arrows.
+    "func-style": ["error", "declaration", { "allowArrowFunctions": true }],
+
+    // MCP tool definitions are written in the order the protocol documents and
+    // a client displays them: title, description, schemas, annotations; and a
+    // content block leads with its `type`, which says how to read the rest.
+    // Alphabetical order would put annotations first and `text` before `type`.
+    "sort-keys": "off",
+
+    // Vitest globals are deliberately not enabled, so the test files import
+    // `describe`/`it`/`expect` explicitly and tsc needs those imports to
+    // resolve them. This rule's autofix deletes them and breaks `typecheck`.
+    "vitest/no-importing-vitest-globals": "off",
+
+    // 0, 1 and -1 are the empty/first/sentinel values and carry no meaning a
+    // constant could add. Everything else gets a name.
+    "no-magic-numbers": [
+      "error",
+      { "ignore": [-1, 0, 1], "ignoreArrayIndexes": true, "ignoreDefaultValues": true }
+    ],
+    "typescript/prefer-readonly-parameter-types": [
+      "error",
+      {
+        "treatMethodsAsReadonly": true,
+        "allow": [
+          // Each tool module takes the server and registers itself on it.
+          // Registering is a mutation, which is the one thing a readonly view
+          // could not express, and the class is the SDK's to declare.
+          { "from": "package", "package": "@modelcontextprotocol/sdk", "name": "McpServer" }
+        ]
+      }
+    ]
+  }
+}
