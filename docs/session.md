@@ -92,8 +92,16 @@ the salt `saltysalt`, 16 bytes, from:
 | OS    | prefix | password                                                      | iterations |
 | ----- | ------ | ------------------------------------------------------------- | ---------- |
 | Linux | `v10`  | `peanuts`, Chromium's built-in one                            | 1          |
-| Linux | `v11`  | `secret-tool lookup application <browser>`                    | 1          |
+| Linux | `v11`  | `secret-tool lookup application <browser>`, then KWallet      | 1          |
 | macOS | `v10`  | `security find-generic-password -w -s <service> -a <account>` | 1003       |
+
+On Linux, a key the Secret Service (GNOME Keyring, KeePassXC) does not have is
+read from KWallet next, with `kwallet-query --read-password "<name> Safe
+Storage" --folder "<name> Keys" kdewallet`. `<name>` is the product name
+Chromium files it under, which yt-dlp records as `Chrome`, `Chromium` and
+`Brave`, with Vivaldi under `Chrome` and Edge and Opera under `Chromium`. Only
+the default wallet, `kdewallet`, is asked. `kwallet-query` prints "Failed to
+read" and exits 0 for a missing entry, which counts as no key.
 
 Values are AES-128-CBC with an IV of 16 spaces. From the store's
 `meta.version` 24 on, the plaintext opens with SHA256(`host_key`), which is

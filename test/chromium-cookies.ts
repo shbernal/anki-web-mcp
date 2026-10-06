@@ -5,7 +5,7 @@ import { DatabaseSync } from "node:sqlite";
 
 import type { BrowserProfile, Keystore } from "../src/import/discovery.js";
 
-export const LINUX: Keystore = { os: "linux", application: "chrome" };
+export const LINUX: Keystore = { os: "linux", application: "chrome", kwallet: "Chrome" };
 export const MAC: Keystore = { os: "darwin", service: "Chrome Safe Storage", account: "Chrome" };
 export const KEYRING_PASSWORD = "keyring-secret";
 export const NOW = new Date("2026-10-06T12:00:00Z");

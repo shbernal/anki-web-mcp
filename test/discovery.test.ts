@@ -41,7 +41,7 @@ describe("profile discovery", () => {
       ["Google Chrome / Default", LINUX],
       ["Google Chrome / Profile 2", LINUX],
       ["Google Chrome / Default", LINUX],
-      ["Opera / opera", { os: "linux", application: "opera" }],
+      ["Opera / opera", { os: "linux", application: "opera", kwallet: "Chromium" }],
     ]);
   });
 

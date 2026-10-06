@@ -8,35 +8,46 @@ import { basename, dirname, join } from "node:path";
 
 /** Where a browser keeps the password its cookie key is derived from. */
 export type Keystore =
-  | { readonly os: "linux"; readonly application: string }
+  | { readonly os: "linux"; readonly application: string; readonly kwallet: string }
   | { readonly os: "darwin"; readonly service: string; readonly account: string };
 
 interface BrowserSpec {
   readonly label: string;
   /** Under `~/Library/Application Support`. */
   readonly mac?: { readonly path: string; readonly service: string; readonly account: string };
-  /** Under `$XDG_CONFIG_HOME`, with the `secret-tool` application token. */
-  readonly linux?: { readonly path: string; readonly application: string };
+  /**
+   * Under `$XDG_CONFIG_HOME`, with the `secret-tool` application token and the
+   * product name KWallet files the key under (`<name> Keys` / `<name> Safe Storage`).
+   */
+  readonly linux?: {
+    readonly path: string;
+    readonly application: string;
+    readonly kwallet: string;
+  };
   /** Opera keeps its one profile at the user-data root rather than in `Default/`. */
   readonly flat?: true;
 }
 
-/** Paths and keystore names as Chromium and each fork spell them. */
+/**
+ * Paths and keystore names as Chromium and each fork spell them. The KWallet
+ * names are yt-dlp's: Edge, Opera and Vivaldi keep Chromium's or Chrome's there
+ * on Linux rather than their own.
+ */
 const BROWSERS = {
   chrome: {
     label: "Google Chrome",
     mac: { path: "Google/Chrome", service: "Chrome Safe Storage", account: "Chrome" },
-    linux: { path: "google-chrome", application: "chrome" },
+    linux: { path: "google-chrome", application: "chrome", kwallet: "Chrome" },
   },
   chromium: {
     label: "Chromium",
     mac: { path: "Chromium", service: "Chromium Safe Storage", account: "Chromium" },
-    linux: { path: "chromium", application: "chromium" },
+    linux: { path: "chromium", application: "chromium", kwallet: "Chromium" },
   },
   brave: {
     label: "Brave",
     mac: { path: "BraveSoftware/Brave-Browser", service: "Brave Safe Storage", account: "Brave" },
-    linux: { path: "BraveSoftware/Brave-Browser", application: "brave" },
+    linux: { path: "BraveSoftware/Brave-Browser", application: "brave", kwallet: "Brave" },
   },
   edge: {
     label: "Microsoft Edge",
@@ -45,17 +56,17 @@ const BROWSERS = {
       service: "Microsoft Edge Safe Storage",
       account: "Microsoft Edge",
     },
-    linux: { path: "microsoft-edge", application: "microsoft-edge" },
+    linux: { path: "microsoft-edge", application: "microsoft-edge", kwallet: "Chromium" },
   },
   vivaldi: {
     label: "Vivaldi",
     mac: { path: "Vivaldi", service: "Vivaldi Safe Storage", account: "Vivaldi" },
-    linux: { path: "vivaldi", application: "vivaldi" },
+    linux: { path: "vivaldi", application: "vivaldi", kwallet: "Chrome" },
   },
   opera: {
     label: "Opera",
     mac: { path: "com.operasoftware.Opera", service: "Opera Safe Storage", account: "Opera" },
-    linux: { path: "opera", application: "opera" },
+    linux: { path: "opera", application: "opera", kwallet: "Chromium" },
     flat: true,
   },
   // No Linux build of either.
@@ -152,7 +163,7 @@ function locate(spec: BrowserSpec, { platform, home, env }: Host): Location | un
     const config = env.XDG_CONFIG_HOME ?? join(home, ".config");
     return {
       root: join(config, spec.linux.path),
-      keystore: { os: "linux", application: spec.linux.application },
+      keystore: { os: "linux", application: spec.linux.application, kwallet: spec.linux.kwallet },
     };
   }
   return undefined;
