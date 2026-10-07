@@ -71,3 +71,31 @@ describe("unshare_deck with several accounts", () => {
     await client.close();
   });
 });
+
+describe("delete_deck with several accounts", () => {
+  it("names the account in the preview and the go-ahead", async () => {
+    expect.assertions(2);
+    await store(DEFAULT_ACCOUNT, "second");
+    const client = await connect();
+    const result = await client.callTool({
+      name: "delete_deck",
+      arguments: { deck: "second deck", account: "second" },
+    });
+    expect(result.structuredContent).toMatchObject({ status: "preview", account: "second" });
+    expect(textOf(result.content)).toContain('confirm: true, account: "second"');
+    await client.close();
+  });
+
+  it("refuses to delete without the account named", async () => {
+    expect.assertions(2);
+    await store(DEFAULT_ACCOUNT, "second");
+    const client = await connect();
+    const result = await client.callTool({
+      name: "delete_deck",
+      arguments: { deck: "7", confirm: true },
+    });
+    expect(result.isError).toBe(true);
+    expect(textOf(result.content)).toMatch(/^Nothing was deleted\. Several AnkiWeb accounts/u);
+    await client.close();
+  });
+});

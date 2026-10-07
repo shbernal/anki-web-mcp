@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/server";
 import type { APIRequestContext } from "playwright";
 import { z } from "zod";
 
-import { listMyDecks, type MyDeck } from "../ankiweb/decks.js";
+import { listMyDecks } from "../ankiweb/decks.js";
 import {
   fetchShareInfo,
   fetchShareState,
@@ -17,11 +17,10 @@ import { sharedDeckPageUrl } from "../ankiweb/urls.js";
 import type { Accounts } from "../browser/accounts.js";
 import { guarded, ToolError } from "../errors.js";
 import { accountInput } from "./account.js";
-import { chooseOne } from "./choose.js";
+import { resolveDeck } from "./deck-choice.js";
 
 export type { PollOptions } from "../ankiweb/share.js";
 
-const DEFAULT_DECK_ID = 1;
 /** Two minutes: AnkiWeb processes a share in the background. */
 const DEFAULT_POLL: PollOptions = { intervalMs: 5000, timeoutMs: 120_000 };
 
@@ -35,6 +34,9 @@ const DESCRIPTION = [
   "With more than one AnkiWeb account stored, the preview names the one it publishes from, and the confirmed call must name it in `account`.",
   "A deck that is already shared is refused. Needs an AnkiWeb session.",
 ].join("\n\n");
+
+const DEFAULT_DECK_REFUSAL =
+  "AnkiWeb does not share the Default deck. Move its cards into a new deck and share that.";
 
 const tag = z.string().regex(/^\S+$/u, "A tag cannot contain whitespace.");
 
@@ -95,24 +97,6 @@ const outputSchema = z.object({
 });
 type ShareOutput = Readonly<z.infer<typeof outputSchema>>;
 
-/** Picks the one deck `input` names by id or exact name, and refuses to guess between several. */
-export function resolveDeck(decks: readonly MyDeck[], input: string): MyDeck {
-  const wanted = input.trim();
-  const only = chooseOne(decks, wanted, {
-    matches: ({ id, name }) => String(id) === wanted || name === wanted,
-    what: "deck on AnkiWeb",
-    listed: "Decks",
-    plural: "decks",
-    describe: ({ id, name }) => `${id} (${name})`,
-  });
-  if (only.id === DEFAULT_DECK_ID) {
-    throw new ToolError(
-      "AnkiWeb does not share the Default deck. Move its cards into a new deck and share that.",
-    );
-  }
-  return only;
-}
-
 /** The input's fields over what AnkiWeb pre-fills the form with. */
 function fillForm(input: ShareInput, prefill: ShareMetadata): ShareMetadata {
   return {
@@ -133,7 +117,7 @@ function splitTags(tags: string): string[] {
  */
 async function prepare(request: APIRequestContext, input: ShareInput): Promise<ShareOutput> {
   const { decks } = await listMyDecks(request);
-  const deck = resolveDeck(decks, input.deck);
+  const deck = resolveDeck(decks, input.deck, DEFAULT_DECK_REFUSAL);
   const info = await fetchShareInfo(request, deck.id);
   if (info.sharedId !== undefined) {
     throw new ToolError(

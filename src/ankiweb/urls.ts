@@ -38,6 +38,7 @@ export function sharedDownloadUrl(id: number, key: string): string {
 }
 
 export const DECK_LIST_URL = `${ANKIWEB_ORIGIN}/svc/decks/deck-list-info`;
+export const DECK_REMOVE_URL = `${ANKIWEB_ORIGIN}/svc/decks/remove-deck`;
 export const DECK_SHARE_INFO_URL = `${ANKIWEB_ORIGIN}/svc/decks/deck-share-info`;
 export const DECK_SHARE_URL = `${ANKIWEB_ORIGIN}/svc/decks/deck-share`;
 export const DECK_SHARE_STATE_URL = `${ANKIWEB_ORIGIN}/svc/decks/deck-share-state`;

@@ -2,6 +2,7 @@ import type { APIRequestContext } from "playwright";
 
 import {
   decodeMessage,
+  encodeMessage,
   type Message,
   readBool,
   readMessage,
@@ -10,7 +11,7 @@ import {
   readString,
 } from "./protobuf.js";
 import { postService } from "./service.js";
-import { DECK_LIST_URL } from "./urls.js";
+import { DECK_LIST_URL, DECK_REMOVE_URL } from "./urls.js";
 
 const SEPARATOR = "::";
 
@@ -32,6 +33,9 @@ const DECK_NODE = {
   totalInDeck: 13,
   totalIncludingChildren: 14,
   filtered: 16,
+} as const;
+const REMOVE_DECK = {
+  deckId: 1,
 } as const;
 
 export interface MyDeck {
@@ -108,4 +112,12 @@ export function decodeDeckList(body: Readonly<Uint8Array>): MyDeckList {
 /** The signed-in user's synced decks, through the browser context's cookie jar. */
 export async function listMyDecks(request: APIRequestContext): Promise<MyDeckList> {
   return decodeDeckList(await postService(request, DECK_LIST_URL));
+}
+
+/**
+ * Deletes a deck and its subdecks from the collection. AnkiWeb answers the same
+ * empty `200` whether or not the id named a deck, so only the deck list can tell.
+ */
+export async function removeDeck(request: APIRequestContext, id: number): Promise<void> {
+  await postService(request, DECK_REMOVE_URL, encodeMessage([[REMOVE_DECK.deckId, BigInt(id)]]));
 }
