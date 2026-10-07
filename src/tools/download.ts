@@ -4,11 +4,11 @@ import { z } from "zod";
 import { AnkiWebHttpError, HTTP_TOO_MANY_REQUESTS } from "../ankiweb/http-error.js";
 import { parseSharedId } from "../ankiweb/ids.js";
 import type { SharedDeckDownload, SharedDecks } from "../ankiweb/shared.js";
+import type { Accounts } from "../browser/accounts.js";
 import { AuthRequiredError } from "../browser/auth-required-error.js";
-import type { BrowserSession } from "../browser/session.js";
-import type { DataDir } from "../data-dir.js";
 import { guarded, ToolError } from "../errors.js";
 import { downloadDirectory, sanitizeFilename, saveApkg } from "../save-apkg.js";
+import { accountInput } from "./account.js";
 
 const directory = z
   .string()
@@ -22,8 +22,11 @@ const savedDeck = z.object({ id: z.number().int(), title: z.string() });
 const DOWNLOAD_LIMIT =
   "AnkiWeb allows only a few downloads without signing in, and this address has used them.";
 
+/** Whatever can hand over a signed-in session's cookie. */
+type CookieSource = Readonly<{ sessionCookie: () => Promise<string> }>;
+
 /** The session's cookie, explaining why one is needed when there is none. */
-async function signedInCookie(session: BrowserSession): Promise<string> {
+async function signedInCookie(session: CookieSource): Promise<string> {
   try {
     return await session.sessionCookie();
   } catch (error) {
@@ -40,7 +43,7 @@ async function signedInCookie(session: BrowserSession): Promise<string> {
  */
 async function startDownload(
   shared: SharedDecks,
-  session: BrowserSession,
+  session: CookieSource,
   id: number,
 ): Promise<SharedDeckDownload> {
   try {
@@ -55,13 +58,12 @@ async function startDownload(
 
 export interface DownloadDependencies {
   readonly shared: SharedDecks;
-  readonly session: BrowserSession;
-  readonly dataDir: DataDir;
+  readonly accounts: Accounts;
 }
 
 export function registerDownload(
   server: McpServer,
-  { shared, session, dataDir }: DownloadDependencies,
+  { shared, accounts }: DownloadDependencies,
 ): void {
   server.registerTool(
     "download_shared_deck",
@@ -74,6 +76,7 @@ export function registerDownload(
           .string()
           .describe("The shared deck's id, or its https://ankiweb.net/shared/info/<id> link."),
         directory,
+        account: accountInput,
       }),
       outputSchema: z.object({
         path: z.string(),
@@ -86,7 +89,8 @@ export function registerDownload(
     guarded("download_shared_deck", async (input) => {
       const id = parseSharedId(input.deck);
       // Checked first, so a bad path costs no request to AnkiWeb.
-      const target = await downloadDirectory(input.directory, dataDir);
+      const target = await downloadDirectory(input.directory, accounts.dataDir);
+      const session = await accounts.session(input.account);
       const download = await startDownload(shared, session, id);
       const filename = sanitizeFilename(
         download.suggestedFilename ?? download.deck.title,

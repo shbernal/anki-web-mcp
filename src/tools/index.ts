@@ -1,8 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/server";
 
 import type { SharedDecks } from "../ankiweb/shared.js";
-import type { BrowserSession } from "../browser/session.js";
-import type { DataDir } from "../data-dir.js";
+import type { Accounts } from "../browser/accounts.js";
 import { registerConvert } from "./convert.js";
 import { registerDownload } from "./download.js";
 import { registerMyDecks } from "./my-decks.js";
@@ -11,8 +10,7 @@ import { type PollOptions, registerShare } from "./share.js";
 import { registerSharedDecks } from "./shared.js";
 
 export interface ToolDependencies {
-  readonly dataDir: DataDir;
-  readonly session: BrowserSession;
+  readonly accounts: Accounts;
   readonly sharedDecks: SharedDecks;
   readonly sharePoll?: PollOptions | undefined;
 }
@@ -20,13 +18,13 @@ export interface ToolDependencies {
 /** Every tool, in the order a client lists them. */
 export function registerTools(
   server: McpServer,
-  { dataDir, session, sharedDecks, sharePoll }: ToolDependencies,
+  { accounts, sharedDecks, sharePoll }: ToolDependencies,
 ): void {
-  registerServerStatus(server, dataDir, session);
+  registerServerStatus(server, accounts);
   registerSharedDecks(server, sharedDecks);
-  registerDownload(server, { shared: sharedDecks, session, dataDir });
+  registerDownload(server, { shared: sharedDecks, accounts });
   registerConvert(server);
-  registerMyDecks(server, session);
-  registerShare(server, session, sharePoll);
-  registerCloseSession(server, session);
+  registerMyDecks(server, accounts);
+  registerShare(server, accounts, sharePoll);
+  registerCloseSession(server, accounts);
 }

@@ -51,6 +51,12 @@ so it needs a session but renders no page.
    - Still processing after two minutes returns `status: "pending"`, which
      tells the assistant not to share again.
 
+With more than one account stored, the preview carries `account`, its text
+starts the listing with `Account: <name>`, and the go-ahead it asks for is
+`confirm: true` with that `account`. A confirmed call that leaves `account` out
+is then refused: a default the user never saw named is no ground to publish
+from. With one account, none of this shows.
+
 The tool is annotated `destructiveHint: false`, `idempotentHint: false` and
 `openWorldHint: true`, and its description tells the assistant to show the
 preview to the user and get their go-ahead before confirming.

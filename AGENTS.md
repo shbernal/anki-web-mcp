@@ -36,10 +36,13 @@ wait for the user. `docs/sharing.md` is the worked example.
 `$XDG_STATE_HOME/anki-web-mcp/` on Linux and `~/.anki-web-mcp/` elsewhere,
 `0700`, holding `profile/` (Playwright's persistent user-data dir),
 `profile.lock` (the process that has it open) and `cookies.json` (`0600`, the
-auth cookies only). `downloads/` sits beside them, except on Linux, where it is
-under `$XDG_DATA_HOME/anki-web-mcp/`. `resolveDataDir` in `src/data-dir.ts`
-decides. Anything new
-that launches a browser on `profile/` goes through `openLocked` or
+auth cookies only) for the default account, and the same three under
+`accounts/<name>/` for each named one. `downloads/` sits beside them, shared by
+every account, except on Linux, where it is under `$XDG_DATA_HOME/anki-web-mcp/`.
+`resolveDataDir` and `accountPaths` in `src/data-dir.ts` decide. A single-account
+user must never see the word "account": no `accounts/` until a named one is
+signed in, and no `--account` in a hint about the default one. Anything new
+that launches a browser on a `profile/` goes through `openLocked` or
 `lockProfile` in `src/browser/profile-lock.ts`. `docs/session.md` has the rules. Cookie values are never logged:
 `redact` in `src/errors.ts` masks them in every message and stack that leaves the
 process.

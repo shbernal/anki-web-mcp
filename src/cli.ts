@@ -4,9 +4,9 @@ import { parseArgs } from "node:util";
 
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
 
+import { Accounts } from "./browser/accounts.js";
 import { installBrowser } from "./browser/launch.js";
 import { login, logout, statusReport } from "./browser/login.js";
-import { BrowserSession } from "./browser/session.js";
 import {
   accountPaths,
   chosenAccount,
@@ -15,7 +15,7 @@ import {
   resolveDataDir,
 } from "./data-dir.js";
 import { BROWSER_NAMES, type BrowserName, isBrowserName } from "./import/discovery.js";
-import { importFromBrowser } from "./import/orchestrate.js";
+import { importFromBrowser, importSession } from "./import/orchestrate.js";
 import { createServer } from "./server.js";
 
 /** `node` and the script path come first. */
@@ -118,22 +118,15 @@ const isDefault = account.name === DEFAULT_ACCOUNT;
 const { channel } = values;
 const importFrom = values["import-from-browser"];
 
-async function importSession(browser: BrowserName | undefined): Promise<void> {
+async function importInto(browser: BrowserName | undefined): Promise<void> {
   // Auto picks whichever profile used AnkiWeb last, which says nothing about whose session it is.
   if (browser === undefined && !isDefault) {
     throw new UsageError(
       `${IMPORT_FLAG} needs a browser named to sign in a named account: ${IMPORT_FLAG} <name> --account ${account.name}`,
     );
   }
-  const session = new BrowserSession({ dataDir, account, channel, holder: "import" });
-  try {
-    const label = await importFromBrowser(browser, (cookies) => session.adoptCookies(cookies), {
-      account: account.name,
-    });
-    console.error(`anki-web-mcp: imported the session from ${label}; stored in ${account.dir}`);
-  } finally {
-    await session.close();
-  }
+  const label = await importSession({ dataDir, account, browser, channel });
+  console.error(`anki-web-mcp: imported the session from ${label}; stored in ${account.dir}`);
 }
 
 async function reportStatus(): Promise<void> {
@@ -147,25 +140,25 @@ async function reportStatus(): Promise<void> {
 }
 
 async function serve(): Promise<void> {
-  const session = new BrowserSession({
+  const accounts = new Accounts({
     dataDir,
-    account,
-    channel,
-    // Only the default account imports on its own; see importSession.
-    autoImport:
-      values["auto-import"] && isDefault
+    fallback: account.name,
+    session: {
+      channel,
+      autoImport: values["auto-import"]
         ? (adopt) => importFromBrowser(undefined, adopt)
         : undefined,
+    },
   });
-  const handle = serveStdio(() => createServer({ dataDir, session }));
+  const handle = serveStdio(() => createServer({ accounts }));
   console.error("anki-web-mcp: serving on stdio");
   // The transport closes itself when the client hangs up, but an open browser
-  // would still keep the process alive. The browser is shared rather than
+  // would still keep the process alive. The browsers are shared rather than
   // released from each server's onclose, because serveStdio also builds and
   // closes throwaway instances for server/discover probes.
   await Promise.race([once(process.stdin, "end"), once(process.stdin, "close")]);
   await handle.close();
-  await session.close();
+  await accounts.close();
 }
 
 // Stdout carries the protocol, so anything human-readable goes to stderr.
@@ -184,7 +177,7 @@ try {
   } else if (importFrom === undefined) {
     await serve();
   } else {
-    await importSession(browserFlag(importFrom));
+    await importInto(browserFlag(importFrom));
   }
 } catch (error) {
   if (error instanceof UsageError) {

@@ -18,13 +18,13 @@ import {
 } from "../data-dir.js";
 import {
   checkStoredSession,
+  exportSession,
   hasSessionCookie,
   readStoredSession,
   SESSION_URLS,
 } from "./cookies.js";
 import { launchContext } from "./launch.js";
 import { assertProfileFree, lockProfile } from "./profile-lock.js";
-import { exportSession } from "./session.js";
 
 /** Ten minutes. */
 const LOGIN_TIMEOUT_MS = 600_000;
@@ -69,7 +69,7 @@ async function signIn(
     await page.goto(LOGIN_URL);
     console.error("anki-web-mcp: sign in to AnkiWeb in the browser window");
     await waitForSignIn(context, closed);
-    await exportSession(context, account, new Date());
+    await exportSession(context, account.cookies, new Date());
     console.error(`anki-web-mcp: signed in; session stored in ${account.dir}`);
   } finally {
     if (!closed.value) {

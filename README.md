@@ -123,6 +123,18 @@ Without `confirm: true` it only returns a preview, and the assistant is told to 
 
 Confirming also makes AnkiWeb's declaration that you own the material or have a license to share it.
 
+### Several accounts
+
+One server can act as more than one AnkiWeb account. Sign each extra one in under a name of your choosing:
+
+```sh
+npx anki-web-mcp@latest --login --account work
+```
+
+Then ask for it by name ("list the decks on my work account").
+Calls that name no account use the one signed in with plain `--login`, or the one `--account` gives the server.
+`npx anki-web-mcp@latest --status` checks them all.
+
 ## How it works
 
 AnkiWeb is a single-page app whose data comes from protobuf endpoints under `/svc/`.

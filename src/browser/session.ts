@@ -5,15 +5,14 @@ import type { Fetch } from "../ankiweb/response-cache.js";
 import { type AccountPaths, type DataDir, ensureAccount } from "../data-dir.js";
 import { AuthRequiredError } from "./auth-required-error.js";
 import {
-  authCookies,
   checkStoredSession,
+  exportSession,
   hasSessionCookie,
   readStoredSession,
   sessionCookieHeader,
   SESSION_DOMAIN_PATTERN,
   SESSION_URLS,
   type StoredCookie,
-  writeStoredSession,
 } from "./cookies.js";
 import { launchContext, type LaunchOptions } from "./launch.js";
 import { openLocked, type ProfileHolder } from "./profile-lock.js";
@@ -91,13 +90,22 @@ export class BrowserSession {
     }
   }
 
-  useAuthenticated<Result>(task: (context: BrowserContext) => Promise<Result>): Promise<Result> {
-    return this.use(async (context) => {
-      if (!(await this.#isAuthenticated(context))) {
-        await this.#importOnce(context);
-      }
-      return task(context);
-    });
+  async useAuthenticated<Result>(
+    task: (context: BrowserContext) => Promise<Result>,
+  ): Promise<Result> {
+    try {
+      return await this.use(async (context) => {
+        if (!(await this.#isAuthenticated(context))) {
+          await this.#importOnce(context);
+        }
+        return task(context);
+      });
+    } catch (error) {
+      // Thrown deep in a request too, where nobody knows which account it was.
+      throw error instanceof AuthRequiredError
+        ? new AuthRequiredError(error.importFailure, this.account.name)
+        : error;
+    }
   }
 
   /**
@@ -109,7 +117,7 @@ export class BrowserSession {
       sessionCookieHeader(await context.cookies([...SESSION_URLS])),
     );
     if (header === undefined) {
-      throw new AuthRequiredError();
+      throw new AuthRequiredError("", this.account.name);
     }
     return header;
   }
@@ -264,7 +272,7 @@ export class BrowserSession {
     const loggedIn = await check(context);
     this.#validated = { at: now, loggedIn };
     if (loggedIn) {
-      await exportSession(context, this.#options.account, new Date(now));
+      await exportSession(context, this.#options.account.cookies, new Date(now));
     }
     return loggedIn;
   }
@@ -285,16 +293,4 @@ async function settled(turn: Promise<unknown>): Promise<void> {
   } catch {
     // The call that queued `turn` gets its error; the next one only waits.
   }
-}
-
-/** Refreshes `cookies.json` from a context whose session was just validated. */
-export async function exportSession(
-  context: BrowserContext,
-  account: AccountPaths,
-  validatedAt: Readonly<Date>,
-): Promise<void> {
-  await writeStoredSession(account.cookies, {
-    validatedAt: validatedAt.toISOString(),
-    cookies: authCookies(await context.cookies([...SESSION_URLS])),
-  });
 }

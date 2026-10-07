@@ -86,7 +86,7 @@ describe("server", () => {
       version,
       dataDir: dataDir.root,
       downloadsDir: dataDir.downloads,
-      sessionStored: false,
+      accounts: [{ name: "default", sessionStored: false }],
     });
     await client.close();
   });
@@ -115,9 +115,9 @@ describe("server", () => {
       version,
       dataDir: dataDir.root,
       downloadsDir: dataDir.downloads,
-      sessionStored: true,
-      lastValidated: VALIDATED_AT,
-      authenticated: false,
+      accounts: [
+        { name: "default", sessionStored: true, lastValidated: VALIDATED_AT, authenticated: false },
+      ],
     });
     await client.close();
   });

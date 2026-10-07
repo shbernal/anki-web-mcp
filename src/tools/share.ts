@@ -14,8 +14,9 @@ import {
   waitForShare,
 } from "../ankiweb/share.js";
 import { sharedDeckPageUrl } from "../ankiweb/urls.js";
-import type { BrowserSession } from "../browser/session.js";
+import type { Accounts } from "../browser/accounts.js";
 import { guarded, ToolError } from "../errors.js";
+import { accountInput } from "./account.js";
 
 export type { PollOptions } from "../ankiweb/share.js";
 
@@ -30,6 +31,7 @@ const DESCRIPTION = [
   "Publish one of the signed-in user's decks to AnkiWeb's public shared-deck catalogue, under their account. Anyone can then find and download it.",
   "Without `confirm`, nothing is published: the call checks the deck and the listing against AnkiWeb's limits and returns a preview. Show that preview to the user and get their explicit go-ahead before calling again with `confirm: true`.",
   `Calling with \`confirm: true\` publishes the deck and makes AnkiWeb's declaration on the user's behalf: "${COPYRIGHT_DECLARATION}"`,
+  "With more than one AnkiWeb account stored, the preview names the one it publishes from, and the confirmed call must name it in `account`.",
   "A deck that is already shared is refused. Needs an AnkiWeb session.",
 ].join("\n\n");
 
@@ -60,6 +62,7 @@ const inputSchema = z.object({
     .describe(
       `A page where users can ask about the deck, up to ${SHARE_LIMITS.supportUrl} characters.`,
     ),
+  account: accountInput,
   confirm: z
     .boolean()
     .default(false)
@@ -71,6 +74,10 @@ const outputSchema = z.object({
   status: z
     .enum(["preview", "shared", "pending"])
     .describe("`pending` means AnkiWeb accepted the share and is still processing it."),
+  account: z
+    .string()
+    .optional()
+    .describe("The account it publishes from, given when more than one is stored."),
   deck: z.object({ id: z.number().int(), name: z.string() }).readonly(),
   title: z.string(),
   description: z.string(),
@@ -187,6 +194,7 @@ async function publish(
 
 function summary(output: ShareOutput): string {
   const listing = [
+    ...(output.account === undefined ? [] : [`Account: ${output.account}`]),
     `Deck: ${output.deck.name} (${output.deck.id})`,
     `Title: ${output.title}`,
     `Tags: ${output.tags.join(" ") || "(none)"}`,
@@ -207,7 +215,7 @@ function summary(output: ShareOutput): string {
   }
   const verdict =
     output.problems.length === 0
-      ? "Ready to publish. Show this to the user, and call again with confirm: true only once they agree."
+      ? `Ready to publish. Show this to the user, and call again with confirm: true${output.account === undefined ? "" : ` and account: "${output.account}"`} only once they agree.`
       : `Cannot be published yet:\n${output.problems.map((problem) => `- ${problem}`).join("\n")}`;
   return [
     "Preview only: nothing was published.",
@@ -219,7 +227,7 @@ function summary(output: ShareOutput): string {
 
 export function registerShare(
   server: McpServer,
-  session: BrowserSession,
+  accounts: Accounts,
   poll: PollOptions = DEFAULT_POLL,
 ): void {
   server.registerTool(
@@ -237,10 +245,20 @@ export function registerShare(
       },
     },
     guarded("share_deck", async (input) => {
-      const output = await session.useAuthenticated(async ({ request }) => {
+      const stored = await accounts.list();
+      const several = stored.length > 1;
+      // A default the user never saw named is no ground to publish from.
+      if (input.confirm && several && input.account === undefined) {
+        throw new ToolError(
+          `Nothing was published. Several AnkiWeb accounts are stored (${stored.join(", ")}): name the one the preview showed in \`account\`.`,
+        );
+      }
+      const session = await accounts.session(input.account);
+      const shared = await session.useAuthenticated(async ({ request }) => {
         const preview = await prepare(request, input);
         return input.confirm ? publish(request, preview, poll) : preview;
       });
+      const output = several ? { ...shared, account: session.account.name } : shared;
       return {
         content: [{ type: "text", text: summary(output) }],
         structuredContent: output,

@@ -3,8 +3,8 @@
  * try-each-in-turn flow are ported from linkedin-mcp-server and rewritten in
  * TypeScript (see NOTICE).
  */
-import type { AdoptCookies } from "../browser/session.js";
-import { DEFAULT_ACCOUNT, loginCommand } from "../data-dir.js";
+import { type AdoptCookies, BrowserSession } from "../browser/session.js";
+import { type AccountPaths, type DataDir, DEFAULT_ACCOUNT, loginCommand } from "../data-dir.js";
 import { type BrowserName, type BrowserProfile, discoverProfiles } from "./discovery.js";
 import { extractCookies, lastSessionUse, type ReadPassword } from "./extract.js";
 import { readKeystorePassword } from "./keystore.js";
@@ -19,6 +19,34 @@ export interface ImportOptions {
 
 export class BrowserImportError extends Error {
   override name = "BrowserImportError";
+}
+
+export interface ImportSessionOptions {
+  readonly dataDir: DataDir;
+  readonly account: AccountPaths;
+  /** Undefined tries every browser found. */
+  readonly browser: BrowserName | undefined;
+  readonly channel: string | undefined;
+}
+
+/**
+ * `--import-from-browser`: brings a local browser's session into `account`,
+ * through a browser of its own, and resolves to the label of the profile kept.
+ */
+export async function importSession({
+  dataDir,
+  account,
+  browser,
+  channel,
+}: ImportSessionOptions): Promise<string> {
+  const session = new BrowserSession({ dataDir, account, channel, holder: "import" });
+  try {
+    return await importFromBrowser(browser, (cookies) => session.adoptCookies(cookies), {
+      account: account.name,
+    });
+  } finally {
+    await session.close();
+  }
 }
 
 /**

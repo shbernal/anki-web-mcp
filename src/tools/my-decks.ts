@@ -2,8 +2,9 @@ import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
 import { listMyDecks } from "../ankiweb/decks.js";
-import type { BrowserSession } from "../browser/session.js";
+import type { Accounts } from "../browser/accounts.js";
 import { guarded } from "../errors.js";
+import { accountInput } from "./account.js";
 
 const deck = z.object({
   id: z.number().int(),
@@ -17,14 +18,14 @@ const deck = z.object({
   cardsIncludingSubdecks: z.number().int(),
 });
 
-export function registerMyDecks(server: McpServer, session: BrowserSession): void {
+export function registerMyDecks(server: McpServer, accounts: Accounts): void {
   server.registerTool(
     "list_my_decks",
     {
       title: "List my decks",
       description:
         "List the decks synced to the signed-in AnkiWeb account, parents before their subdecks, with due counts and card totals. Needs an AnkiWeb session.",
-      inputSchema: z.object({}),
+      inputSchema: z.object({ account: accountInput }),
       outputSchema: z.object({
         decks: z.array(deck),
         currentDeckId: z.number().int(),
@@ -33,7 +34,8 @@ export function registerMyDecks(server: McpServer, session: BrowserSession): voi
       }),
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
-    guarded("list_my_decks", async () => {
+    guarded("list_my_decks", async ({ account }) => {
+      const session = await accounts.session(account);
       const list = await session.useAuthenticated((context) => listMyDecks(context.request));
       const lines = list.decks.map(
         ({ id, name, cardsIncludingSubdecks }) =>

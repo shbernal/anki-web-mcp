@@ -191,6 +191,26 @@ runs the bundled Playwright CLI's `install chromium`.
 
 ## In the server
 
+One server process serves every account in its data dir. `Accounts`
+(`src/browser/accounts.ts`) gives each account its own `BrowserSession`, built
+the first time a call needs it, so each has its own browser, queue, idle timer
+and profile lock: two accounts never share a cookie jar or wait on each other.
+Closing the server closes them all.
+
+`list_my_decks`, `download_shared_deck`, `share_deck`, `server_status` and
+`close_session` take an optional `account`, which defaults to the server's
+`--account`, or `default`. Its description tells the assistant to leave it out
+unless the user names an account, since the default is right for a
+single-account user and the assistant cannot know how many accounts there are
+without a call. The tools that need no session take none.
+
+A named account must already be on disk: a tool call never creates one. An
+unknown name is refused with the accounts there are and the `--login --account`
+that adds it. The default account is always accepted, as before accounts had
+names, so a fresh install can still be signed in by the automatic import. That
+import runs for the default account only, and the `AuthRequiredError` a named
+account gets says `--login --account <name>`.
+
 `BrowserSession` launches headless on the first call that needs a browser, and
 concurrent calls share that one launch. It closes after five minutes with
 nothing in flight, and the next call relaunches it. `close_session` closes it
@@ -218,11 +238,12 @@ end, then closes the server and the browser. The browser cannot be released from
 a server's `onclose` instead, because `serveStdio` also builds and closes
 throwaway server instances to answer `server/discover` probes.
 
-`server_status` reports `version`, `dataDir` (where the session is),
-`downloadsDir`, `sessionStored` (whether
+`server_status` reports `version`, `dataDir` (where the sessions are),
+`downloadsDir` and `accounts`: each account stored, plus the server's default
+one if nothing is stored yet, with `name`, `sessionStored` (whether its
 `cookies.json` holds the session cookie) and `lastValidated`. With
-`validate: true` it also checks the session against AnkiWeb and adds
-`authenticated`. When no browser is open, that is the same `get-account-status`
+`validate: true` it also checks each session against AnkiWeb, or only the one
+`account` names, and adds `authenticated`. When no browser is open, that is the same `get-account-status`
 POST sent over `fetch` with the stored `ankiweb` cookie, which costs one request
 and no Chromium; a yes refreshes `validatedAt`. A browser already open is asked
 instead. A stored cookie that is missing or turned down falls back to launching

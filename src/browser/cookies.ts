@@ -1,6 +1,6 @@
 import { readFile, rename, writeFile } from "node:fs/promises";
 
-import type { Cookie } from "playwright";
+import type { BrowserContext, Cookie } from "playwright";
 import { z } from "zod";
 
 import { checkLoggedInOverHttp } from "../ankiweb/account.js";
@@ -109,4 +109,16 @@ export async function checkStoredSession(path: string, fetcher: Fetch): Promise<
   }
   await writeStoredSession(path, { ...stored, validatedAt: new Date().toISOString() });
   return true;
+}
+
+/** Refreshes the export at `path` from a context whose session was just validated. */
+export async function exportSession(
+  context: BrowserContext,
+  path: string,
+  validatedAt: Readonly<Date>,
+): Promise<void> {
+  await writeStoredSession(path, {
+    validatedAt: validatedAt.toISOString(),
+    cookies: authCookies(await context.cookies([...SESSION_URLS])),
+  });
 }
