@@ -105,6 +105,7 @@ created `0700`, and `--logout` deletes it.
 | `download_shared_deck`     | saves a shared deck's `.apkg`, never overwriting a file   |
 | `convert_deck_to_markdown` | turns a local `.apkg` into Flashcard Markdown and images  |
 | `list_my_decks`            | the decks synced to your account, with due counts         |
+| `list_my_shared_decks`     | the decks you have shared, with downloads and ratings     |
 | `share_deck`               | publishes one of your decks to the shared catalogue       |
 | `server_status`            | version, data directory, and whether the session is valid |
 | `close_session`            | closes the headless browser until the next call needs it  |

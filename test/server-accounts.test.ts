@@ -46,6 +46,19 @@ function deckList(name: string): Uint8Array {
   ]);
 }
 
+/** A list of one shared listing, titled after the account it belongs to. */
+function sharedList(name: string): Uint8Array {
+  return encodeMessage([
+    [
+      1,
+      encodeMessage([
+        [1, 9],
+        [2, `${name} listing`],
+      ]),
+    ],
+  ]);
+}
+
 interface Fake {
   readonly fake: FakeContext;
   launches: number;
@@ -75,6 +88,9 @@ function fakeFor(name: string): Fake {
           await once(gates, "release");
         }
         return { status: 200, body: deckList(name) };
+      }
+      if (url.endsWith("/list-mine")) {
+        return { status: 200, body: sharedList(name) };
       }
       return { status: 200, body: new Uint8Array() };
     }),
@@ -152,6 +168,20 @@ describe("several accounts in one server", () => {
     });
     expect(textOf(mine.content)).toContain("default deck");
     expect(textOf(theirs.content)).toContain("second deck");
+    await client.close();
+  });
+
+  it("lists the shared decks of the account named", async () => {
+    expect.assertions(2);
+    await store(DEFAULT_ACCOUNT, "second");
+    const client = await connect();
+    const mine = await client.callTool({ name: "list_my_shared_decks" });
+    const theirs = await client.callTool({
+      name: "list_my_shared_decks",
+      arguments: { account: "second" },
+    });
+    expect(textOf(mine.content)).toContain("default listing");
+    expect(textOf(theirs.content)).toContain("second listing");
     await client.close();
   });
 

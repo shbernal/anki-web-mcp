@@ -114,7 +114,8 @@ export interface SharedDeckDetail {
   readonly downloadKey?: string;
 }
 
-function isoFromSeconds(seconds: number | undefined): string {
+/** A Unix timestamp in seconds as ISO 8601, the epoch when AnkiWeb left it out. */
+export function isoFromSeconds(seconds: number | undefined): string {
   return new Date((seconds ?? 0) * MS_PER_SECOND).toISOString();
 }
 

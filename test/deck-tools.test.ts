@@ -2,6 +2,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import type { Client } from "@modelcontextprotocol/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { SharedDecks } from "../src/ankiweb/shared.js";
@@ -159,5 +160,52 @@ describe("list_my_decks", () => {
     expect(result.isError).toBe(true);
     expect(textOf(result.content)).toMatch(/anki-web-mcp --login/u);
     await client.close();
+  });
+});
+
+/** Calls `list_my_shared_decks` signed in, with `list-mine` answering the recorded `fixture`. */
+async function listed(fixture: string): Promise<Awaited<ReturnType<Client["callTool"]>>> {
+  const body = await readFile(new URL(`fixtures/ankiweb/${fixture}`, import.meta.url));
+  const client = await connectedClient({
+    dataDir,
+    sharedDecks: catalogue(() => true),
+    loggedIn: true,
+    respond: async (url) => ({
+      status: url.endsWith("/list-mine") ? 200 : 404,
+      body: url.endsWith("/list-mine") ? body : new Uint8Array(),
+    }),
+  });
+  const result = await client.callTool({ name: "list_my_shared_decks" });
+  await client.close();
+  return result;
+}
+
+describe("list_my_shared_decks", () => {
+  it("lists the signed-in user's listings with their links", async () => {
+    expect.assertions(2);
+    const result = await listed("list-mine-one.bin");
+    expect(result.structuredContent).toStrictEqual({
+      items: [
+        {
+          id: 260_296_473,
+          title: "anki-web-mcp test, please ignore",
+          url: "https://ankiweb.net/shared/info/260296473",
+          thumbsUp: 0,
+          thumbsDown: 0,
+          downloads: 0,
+          modified: "2026-10-07T00:00:00.000Z",
+        },
+      ],
+    });
+    expect(textOf(result.content)).toBe(
+      "1 shared deck on AnkiWeb.\n260296473  anki-web-mcp test, please ignore  (0 downloads, +0/-0)",
+    );
+  });
+
+  it("says so when nothing is shared", async () => {
+    expect.assertions(2);
+    const result = await listed("list-mine-empty.bin");
+    expect(result.structuredContent).toStrictEqual({ items: [] });
+    expect(textOf(result.content)).toBe("No shared decks on AnkiWeb.");
   });
 });
