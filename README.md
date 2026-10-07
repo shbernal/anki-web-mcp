@@ -107,6 +107,7 @@ created `0700`, and `--logout` deletes it.
 | `list_my_decks`            | the decks synced to your account, with due counts         |
 | `list_my_shared_decks`     | the decks you have shared, with downloads and ratings     |
 | `share_deck`               | publishes one of your decks to the shared catalogue       |
+| `unshare_deck`             | takes one of your listings off the shared catalogue       |
 | `server_status`            | version, data directory, and whether the session is valid |
 | `close_session`            | closes the headless browser until the next call needs it  |
 
@@ -114,7 +115,7 @@ created `0700`, and `--logout` deletes it.
 
 ### Sharing asks first
 
-`share_deck` publishes under your account, so it takes two calls.
+`share_deck` publishes under your account, so it takes two calls, and so does `unshare_deck`, which removes a listing.
 Without `confirm: true` it only returns a preview, and the assistant is told to show it to you and wait.
 
 <picture>
@@ -126,7 +127,7 @@ Confirming also makes AnkiWeb's declaration that you own the material or have a 
 
 ### Read-only
 
-Start the server with `--read-only`, or `ANKI_WEB_MCP_READ_ONLY=1`, and it lists no tool that changes anything on AnkiWeb, so `share_deck` is not offered at all:
+Start the server with `--read-only`, or `ANKI_WEB_MCP_READ_ONLY=1`, and it lists no tool that changes anything on AnkiWeb, so `share_deck` and `unshare_deck` are not offered at all:
 
 ```json
 { "command": "npx", "args": ["anki-web-mcp@latest", "--read-only"] }

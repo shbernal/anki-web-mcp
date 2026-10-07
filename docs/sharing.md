@@ -1,21 +1,28 @@
-# Sharing a deck
+# Sharing a deck, and removing a listing
 
 `share_deck` publishes one of the user's synced decks to AnkiWeb's public
-catalogue. It is the only tool that changes anything other people can see, so
-nothing is published unless the call says `confirm: true`.
+catalogue, and `unshare_deck` takes one of the user's listings off it. Both
+change what other people can see, so neither acts unless the call says
+`confirm: true`. Both are left out entirely when the server runs with
+`--read-only`.
 
-It talks to the same endpoints the share page uses (see
-[ankiweb.md](ankiweb.md#share-flow)) through the browser context's request API,
-so it needs a session but renders no page.
+They talk to the same endpoints AnkiWeb's own pages use (see
+[ankiweb.md](ankiweb.md#share-flow) and
+[ankiweb.md](ankiweb.md#shared-items)) through the browser context's request
+API, so they need a session but render no page.
 
 ## Layout
 
-| module                    | does                                                             |
-| ------------------------- | ---------------------------------------------------------------- |
-| `src/ankiweb/service.ts`  | posts to a session-only `/svc/...` endpoint, maps 403 and errors |
-| `src/ankiweb/protobuf.ts` | reads any message, and writes the few this server sends          |
-| `src/ankiweb/share.ts`    | the share form's prefill, its limits, submitting, polling        |
-| `src/tools/share.ts`      | picks the deck, builds the preview, publishes on confirm         |
+| module                     | does                                                             |
+| -------------------------- | ---------------------------------------------------------------- |
+| `src/ankiweb/service.ts`   | posts to a session-only `/svc/...` endpoint, maps 403 and errors |
+| `src/ankiweb/protobuf.ts`  | reads any message, and writes the few this server sends          |
+| `src/ankiweb/share.ts`     | the share form's prefill, its limits, submitting, polling        |
+| `src/ankiweb/my-shared.ts` | lists the user's listings, removes one                           |
+| `src/tools/choose.ts`      | picks one item by id or exact name, refusing to guess            |
+| `src/tools/share.ts`       | picks the deck, builds the preview, publishes on confirm         |
+| `src/tools/unshare.ts`     | picks the listing, builds the preview, removes on confirm        |
+| `src/tools/acting.ts`      | registers the tools that act, which `--read-only` leaves out     |
 
 ## A call
 
@@ -25,7 +32,8 @@ so it needs a session but renders no page.
 2. **Read the form.** `deck-share-info` gives what the form is pre-filled with
    and how many shares the account made in the last seven days. A deck that
    carries a `shared_id` is already shared: the call stops and gives its link.
-   Sharing it again would update that listing, which this tool does not do yet.
+   Sharing it again would update that listing, which this tool does not do yet;
+   the refusal points at `unshare_deck` for removing it.
 3. **Fill it.** `title`, `description`, `tags` and `supportUrl` override the
    prefill. Tags are a list of words without whitespace, sent space-separated.
 4. **Check it.** Every limit the form enforces becomes a line in `problems`:
@@ -51,12 +59,42 @@ so it needs a session but renders no page.
    - Still processing after two minutes returns `status: "pending"`, which
      tells the assistant not to share again.
 
+## Removing a listing
+
+1. **Read the user's listings.** `list-mine` is read afresh on every call.
+   `listing` is a shared id, an `ankiweb.net/shared/info/<id>` link, or an exact
+   title, as `list_my_shared_decks` gives them. A title two listings share is
+   refused with both ids. An id that is not among the user's own is refused
+   too, and that check is the only thing that keeps the tool from asking
+   AnkiWeb to remove someone else's listing: `remove-item` answers an empty
+   `200` either way.
+2. **Without `confirm`,** the call returns `status: "preview"` with the
+   listing's title, link, downloads and ratings. Its text starts "Preview only:
+   nothing was removed." and says what removal does: the listing goes with its
+   ratings and reviews, its link then answers as if it never existed, AnkiWeb
+   cannot restore it, and the deck stays in the collection. Nothing is posted
+   past `list-mine`.
+3. **With `confirm: true`,** step 1 runs again from scratch, then
+   `remove-item` is posted and `list-mine` read once more. The call returns
+   `status: "removed"` only once the id is gone from it; still listed is an
+   error. A listing removed between the two calls is refused by the re-run of
+   step 1, since AnkiWeb's answer to the removal says nothing either way.
+
+A listing outlives its deck, so a listing whose deck was deleted is removed the
+same way: nothing here reads the deck list.
+
+## Several accounts
+
 With more than one account stored, the preview carries `account`, its text
 starts the listing with `Account: <name>`, and the go-ahead it asks for is
 `confirm: true` with that `account`. A confirmed call that leaves `account` out
 is then refused: a default the user never saw named is no ground to publish
-from. With one account, none of this shows.
+from, or to remove from. With one account, none of this shows. Both tools
+follow this rule alike.
 
-The tool is annotated `destructiveHint: false`, `idempotentHint: false` and
-`openWorldHint: true`, and its description tells the assistant to show the
+## Annotations
+
+`share_deck` is annotated `destructiveHint: false` and `idempotentHint: false`,
+and `unshare_deck` `destructiveHint: true` and `idempotentHint: true`; both are
+`openWorldHint: true`. Each description tells the assistant to show the
 preview to the user and get their go-ahead before confirming.

@@ -1,9 +1,16 @@
 import type { APIRequestContext } from "playwright";
 
-import { decodeMessage, type Message, readMessages, readNumber, readString } from "./protobuf.js";
+import {
+  decodeMessage,
+  encodeMessage,
+  type Message,
+  readMessages,
+  readNumber,
+  readString,
+} from "./protobuf.js";
 import { postService } from "./service.js";
 import { isoFromSeconds } from "./shared.js";
-import { SHARED_LIST_MINE_URL } from "./urls.js";
+import { SHARED_LIST_MINE_URL, SHARED_REMOVE_ITEM_URL } from "./urls.js";
 
 // Field numbers, as `docs/ankiweb.md` lists them for each message.
 const LIST_MINE = {
@@ -16,6 +23,9 @@ const ITEM = {
   thumbsDown: 4,
   mtime: 5,
   downloads: 6,
+} as const;
+const REMOVE_ITEM = {
+  sharedId: 1,
 } as const;
 
 /** One of the signed-in user's shared listings. It names no deck: AnkiWeb sends none. */
@@ -54,4 +64,12 @@ export async function listMySharedItems(
   request: APIRequestContext,
 ): Promise<readonly MySharedItem[]> {
   return decodeMySharedItems(await postService(request, SHARED_LIST_MINE_URL));
+}
+
+/**
+ * Takes a listing off the shared catalogue. AnkiWeb answers the same empty
+ * `200` whether or not the id was listed, so only `list-mine` can tell.
+ */
+export async function removeSharedItem(request: APIRequestContext, id: number): Promise<void> {
+  await postService(request, SHARED_REMOVE_ITEM_URL, encodeMessage([[REMOVE_ITEM.sharedId, id]]));
 }

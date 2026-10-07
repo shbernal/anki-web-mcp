@@ -77,6 +77,15 @@ describe("server", () => {
           openWorldHint: true,
         },
       },
+      {
+        name: "unshare_deck",
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: true,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
+      },
       { name: "close_session" },
     ]);
     await client.close();

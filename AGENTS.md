@@ -25,13 +25,13 @@ the code takes a `BrowserContext` or its `APIRequestContext`.
 
 ## Outward-facing tools take `confirm: true`
 
-Any tool that changes something other people can see (today `share_deck`; any
-later edit or removal of a listing) previews without `confirm: true` and acts
+Any tool that changes something other people can see (today `share_deck` and
+`unshare_deck`; any later edit of a listing) previews without `confirm: true` and acts
 only with it. The confirmed call reads everything again rather than trusting the
 preview, and the tool description tells the assistant to show the preview and
 wait for the user. `docs/sharing.md` is the worked example. Such a tool is also
-registered inside the read-only guard in `src/tools/index.ts`, so `--read-only`
-leaves it unlisted.
+registered in `src/tools/acting.ts`, which `--read-only` leaves out whole, so
+the tool goes unlisted.
 
 ## The data directory
 

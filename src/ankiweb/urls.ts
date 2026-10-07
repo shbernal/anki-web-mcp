@@ -43,3 +43,4 @@ export const DECK_SHARE_URL = `${ANKIWEB_ORIGIN}/svc/decks/deck-share`;
 export const DECK_SHARE_STATE_URL = `${ANKIWEB_ORIGIN}/svc/decks/deck-share-state`;
 
 export const SHARED_LIST_MINE_URL = `${ANKIWEB_ORIGIN}/svc/shared/list-mine`;
+export const SHARED_REMOVE_ITEM_URL = `${ANKIWEB_ORIGIN}/svc/shared/remove-item`;

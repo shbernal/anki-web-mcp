@@ -17,6 +17,7 @@ import { sharedDeckPageUrl } from "../ankiweb/urls.js";
 import type { Accounts } from "../browser/accounts.js";
 import { guarded, ToolError } from "../errors.js";
 import { accountInput } from "./account.js";
+import { chooseOne } from "./choose.js";
 
 export type { PollOptions } from "../ankiweb/share.js";
 
@@ -97,18 +98,13 @@ type ShareOutput = Readonly<z.infer<typeof outputSchema>>;
 /** Picks the one deck `input` names by id or exact name, and refuses to guess between several. */
 export function resolveDeck(decks: readonly MyDeck[], input: string): MyDeck {
   const wanted = input.trim();
-  const matches = decks.filter(({ id, name }) => String(id) === wanted || name === wanted);
-  const [only] = matches;
-  if (only === undefined) {
-    throw new ToolError(
-      `No deck on AnkiWeb has the id or name "${wanted}". Decks: ${decks.map(({ id, name }) => `${id} (${name})`).join(", ") || "none"}.`,
-    );
-  }
-  if (matches.length > 1) {
-    throw new ToolError(
-      `"${wanted}" matches ${matches.length} decks: ${matches.map(({ id, name }) => `${id} (${name})`).join(", ")}. Name one by its id.`,
-    );
-  }
+  const only = chooseOne(decks, wanted, {
+    matches: ({ id, name }) => String(id) === wanted || name === wanted,
+    what: "deck on AnkiWeb",
+    listed: "Decks",
+    plural: "decks",
+    describe: ({ id, name }) => `${id} (${name})`,
+  });
   if (only.id === DEFAULT_DECK_ID) {
     throw new ToolError(
       "AnkiWeb does not share the Default deck. Move its cards into a new deck and share that.",
@@ -141,7 +137,7 @@ async function prepare(request: APIRequestContext, input: ShareInput): Promise<S
   const info = await fetchShareInfo(request, deck.id);
   if (info.sharedId !== undefined) {
     throw new ToolError(
-      `"${deck.name}" is already shared as ${sharedDeckPageUrl(info.sharedId)}. Updating or removing a listing is done on AnkiWeb.`,
+      `"${deck.name}" is already shared as ${sharedDeckPageUrl(info.sharedId)}. unshare_deck removes that listing; updating it is done on AnkiWeb.`,
     );
   }
   const metadata = fillForm(input, info.metadata);
