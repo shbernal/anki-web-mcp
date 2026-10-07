@@ -29,6 +29,7 @@ export interface ClientOptions {
   readonly respond?: Respond;
   /** How long `share_deck` waits on AnkiWeb; tests poll without sleeping. */
   readonly sharePoll?: PollOptions;
+  readonly readOnly?: boolean;
 }
 
 /** A client connected to a server whose browser is a fake. */
@@ -39,6 +40,7 @@ export async function connectedClient({
   cookies = [],
   respond,
   sharePoll,
+  readOnly = false,
 }: ClientOptions): Promise<Client> {
   const fake = fakeContext(cookies, respond);
   const accounts = new Accounts({
@@ -55,6 +57,7 @@ export async function connectedClient({
     createServer({
       accounts,
       sharedDecks,
+      readOnly,
       ...(sharePoll === undefined ? {} : { sharePoll }),
     }).connect(serverSide),
     client.connect(clientSide),

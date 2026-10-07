@@ -22,6 +22,12 @@ const STATUS = z.object({
   accounts: z
     .array(ACCOUNT_STATUS)
     .describe("Each AnkiWeb account stored, `default` first; just `default` for most users."),
+  readOnly: z
+    .literal(true)
+    .optional()
+    .describe(
+      "Present when the server was started read-only and lists no tool that acts on AnkiWeb.",
+    ),
 });
 type AccountStatus = z.infer<typeof ACCOUNT_STATUS>;
 
@@ -48,7 +54,14 @@ async function accountStatus(
   };
 }
 
-export function registerServerStatus(server: McpServer, accounts: Accounts): void {
+const READ_ONLY_NOTE =
+  "Read-only: the server was started with --read-only or ANKI_WEB_MCP_READ_ONLY, so no tool that changes anything on AnkiWeb, such as share_deck, is available.";
+
+export function registerServerStatus(
+  server: McpServer,
+  accounts: Accounts,
+  readOnly: boolean,
+): void {
   server.registerTool(
     "server_status",
     {
@@ -84,9 +97,11 @@ export function registerServerStatus(server: McpServer, accounts: Accounts): voi
         dataDir: accounts.dataDir.root,
         downloadsDir: accounts.dataDir.downloads,
         accounts: statuses,
+        ...(readOnly ? { readOnly } : {}),
       };
+      const json = JSON.stringify(status);
       return {
-        content: [{ type: "text", text: JSON.stringify(status) }],
+        content: [{ type: "text", text: readOnly ? `${json}\n${READ_ONLY_NOTE}` : json }],
         structuredContent: status,
       };
     }),

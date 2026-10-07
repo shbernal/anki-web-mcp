@@ -16,7 +16,7 @@ import {
 } from "./data-dir.js";
 import { BROWSER_NAMES, type BrowserName, isBrowserName } from "./import/discovery.js";
 import { importFromBrowser, importSession } from "./import/orchestrate.js";
-import { createServer } from "./server.js";
+import { createServer, readOnlyMode } from "./server.js";
 
 /** `node` and the script path come first. */
 const ARGV_OFFSET = 2;
@@ -44,6 +44,7 @@ Serves MCP over stdio unless one of the first five options is given.
   --install-browser             download Playwright's Chromium
   --no-auto-import              never look in local browsers on its own
   --account <name>              act on, or serve by default, that account; also ANKI_WEB_MCP_ACCOUNT
+  --read-only                   list no tool that changes anything on AnkiWeb; also ANKI_WEB_MCP_READ_ONLY
   --channel <name>              drive an installed browser, such as chrome
   --data-dir <path>             keep the session elsewhere; also ANKI_WEB_MCP_DATA_DIR
   -h, --help                    show this help`;
@@ -86,6 +87,7 @@ function parseCommandLine(args: readonly string[]) {
         "data-dir": { type: "string" },
         account: { type: "string" },
         channel: { type: "string" },
+        "read-only": { type: "boolean" },
         help: { type: "boolean", short: "h" },
       },
       allowNegative: true,
@@ -140,6 +142,10 @@ async function reportStatus(): Promise<void> {
 }
 
 async function serve(): Promise<void> {
+  const readOnly = readOnlyMode(values["read-only"]);
+  if (typeof readOnly !== "boolean") {
+    exitWithUsage(readOnly.usage);
+  }
   const accounts = new Accounts({
     dataDir,
     fallback: account.name,
@@ -150,7 +156,7 @@ async function serve(): Promise<void> {
         : undefined,
     },
   });
-  const handle = serveStdio(() => createServer({ accounts }));
+  const handle = serveStdio(() => createServer({ accounts, readOnly }));
   console.error("anki-web-mcp: serving on stdio");
   // The transport closes itself when the client hangs up, but an open browser
   // would still keep the process alive. The browsers are shared rather than

@@ -123,6 +123,14 @@ Without `confirm: true` it only returns a preview, and the assistant is told to 
 
 Confirming also makes AnkiWeb's declaration that you own the material or have a license to share it.
 
+### Read-only
+
+Start the server with `--read-only`, or `ANKI_WEB_MCP_READ_ONLY=1`, and it lists no tool that changes anything on AnkiWeb, so `share_deck` is not offered at all:
+
+```json
+{ "command": "npx", "args": ["anki-web-mcp@latest", "--read-only"] }
+```
+
 ### Several accounts
 
 One server can act as more than one AnkiWeb account. Sign each extra one in under a name of your choosing:

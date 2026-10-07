@@ -38,8 +38,11 @@ function recordedSharedDecks(): SharedDecks {
   return new SharedDecks({ fetch: fake.fetch });
 }
 
-async function connectedClient(sharedDecks = recordedSharedDecks()): Promise<Client> {
-  return connect({ dataDir, sharedDecks });
+async function connectedClient(
+  sharedDecks = recordedSharedDecks(),
+  readOnly = false,
+): Promise<Client> {
+  return connect({ dataDir, sharedDecks, readOnly });
 }
 
 beforeEach(async () => {
@@ -75,6 +78,38 @@ describe("server", () => {
       },
       { name: "close_session" },
     ]);
+    await client.close();
+  });
+
+  it("lists no tool that acts on AnkiWeb when read-only", async () => {
+    expect.assertions(1);
+    const client = await connectedClient(recordedSharedDecks(), true);
+    const { tools } = await client.listTools();
+    // An array matches only at the same length, so share_deck is absent.
+    expect(tools).toMatchObject([
+      { name: "server_status" },
+      { name: "search_shared_decks" },
+      { name: "get_shared_deck" },
+      { name: "download_shared_deck" },
+      { name: "convert_deck_to_markdown" },
+      { name: "list_my_decks" },
+      { name: "close_session" },
+    ]);
+    await client.close();
+  });
+
+  it("says it is read-only in its status", async () => {
+    expect.assertions(2);
+    const client = await connectedClient(recordedSharedDecks(), true);
+    const result = await client.callTool({ name: "server_status" });
+    expect(result.structuredContent).toStrictEqual({
+      version,
+      dataDir: dataDir.root,
+      downloadsDir: dataDir.downloads,
+      accounts: [{ name: "default", sessionStored: false }],
+      readOnly: true,
+    });
+    expect(textOf(result.content)).toContain("Read-only");
     await client.close();
   });
 
