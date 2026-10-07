@@ -197,7 +197,8 @@ the first time a call needs it, so each has its own browser, queue, idle timer
 and profile lock: two accounts never share a cookie jar or wait on each other.
 Closing the server closes them all.
 
-`list_my_decks`, `download_shared_deck`, `share_deck`, `server_status` and
+`list_my_decks`, `list_my_shared_decks`, `download_shared_deck`,
+`share_deck`, `unshare_deck`, `delete_deck`, `server_status` and
 `close_session` take an optional `account`, which defaults to the server's
 `--account`, or `default`. Its description tells the assistant to leave it out
 unless the user names an account, since the default is right for a

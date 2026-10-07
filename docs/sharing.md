@@ -4,7 +4,7 @@
 catalogue, and `unshare_deck` takes one of the user's listings off it. Both
 change what other people can see, so neither acts unless the call says
 `confirm: true`. Both are left out entirely when the server runs with
-`--read-only`.
+[`--read-only`](cli.md).
 
 They talk to the same endpoints AnkiWeb's own pages use (see
 [ankiweb.md](ankiweb.md#share-flow) and

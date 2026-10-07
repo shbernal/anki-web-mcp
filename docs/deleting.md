@@ -5,7 +5,7 @@ cards, from their AnkiWeb collection. Every device picks the deletion up on its
 next sync, and AnkiWeb's own page warns "Delete all cards in deck? This can not
 be undone." So nothing is deleted unless the call says `confirm: true`, the
 confirmed call names the deck by its id, and the tool is left out entirely when
-the server runs with `--read-only`.
+the server runs with [`--read-only`](cli.md).
 
 It talks to the endpoints the deck list uses (see
 [ankiweb.md](ankiweb.md#the-users-decks)) through the browser context's request

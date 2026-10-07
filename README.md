@@ -129,7 +129,7 @@ Confirming also makes AnkiWeb's declaration that you own the material or have a 
 
 ### Read-only
 
-Start the server with `--read-only`, or `ANKI_WEB_MCP_READ_ONLY=1`, and it lists no tool that changes anything on AnkiWeb, so `share_deck`, `unshare_deck` and `delete_deck` are not offered at all:
+Start the server with `--read-only`, or `ANKI_WEB_MCP_READ_ONLY=1`, and it lists no tool that changes anything on AnkiWeb, so `share_deck`, `unshare_deck` and `delete_deck` are not offered at all ([docs/cli.md](docs/cli.md)):
 
 ```json
 { "command": "npx", "args": ["anki-web-mcp@latest", "--read-only"] }
@@ -156,7 +156,7 @@ The server calls those endpoints directly and renders no pages.
 flowchart LR
   A[MCP client] -- stdio --> S[anki-web-mcp]
   S -- "fetch, no cookies" --> P["/svc/shared/*<br>search, listings, downloads"]
-  S -- "headless Chromium,<br>signed-in cookie jar" --> U["/svc/decks/*<br>your decks, sharing"]
+  S -- "headless Chromium,<br>signed-in cookie jar" --> U["/svc/decks/*, your /svc/shared/*<br>your decks and listings:<br>list, share, remove, delete"]
   B[Local browser profile] -. "session import" .-> S
 ```
 

@@ -24,8 +24,10 @@ in [session.md](session.md#accounts) prints one line and exits with status 2.
 `--read-only` and `--no-read-only` win over `ANKI_WEB_MCP_READ_ONLY`, which
 takes `1` or `true` for on and `0`, `false` or an empty value for off, in any
 case; anything else is a usage error. Only serving reads it: the one-job flags
-ignore it. A read-only server leaves `share_deck`, `unshare_deck` and `delete_deck` unregistered,
-so no client lists them, and `server_status` reports `readOnly: true`.
+ignore it. A read-only server leaves out every tool that acts on AnkiWeb, the
+set `src/tools/acting.ts` registers: `share_deck`, `unshare_deck` and
+`delete_deck`. No client lists them, and `server_status` reports
+`readOnly: true`.
 
 [session.md](session.md) covers what `--login`, `--logout`,
 `--import-from-browser` and `--channel` do to the data directory.
