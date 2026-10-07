@@ -234,27 +234,67 @@ DeckNode {
   creation time in milliseconds as its id (for example `1791280883007`).
 - **The empty Default deck is hidden:** it is left out of the tree once any
   other deck exists.
-- **Subdeck names** have not been seen, because the test account has none. Anki's
-  own deck tree names each node by its last component, so `Parent::Child` may
-  arrive as `Child` under `Parent`.
+- **Subdecks** nest under their parent and carry only their last name
+  component: `Parent::Child`, made with `create-deck`, arrives as a node named
+  `Child`, `level` 2, in its parent's `children`.
 - **Page layout:** each deck is a `button` with its name, next to an "Actions"
   `button` whose menu offers "Rename", "Share" and "Delete".
   - "Share" goes to `/decks/share/<deck_id>`.
   - "Delete" asks "Delete all cards in deck? This can not be undone." in a
     native `confirm()` dialog, then sends `POST /svc/decks/remove-deck` with
     `{ int64 deck_id = 1; }`.
+  - `remove-deck` answers `200` with an empty body, and its subdecks go with
+    it. An id that names no deck, such as one just deleted, gets the same
+    `200` and empty body, so only `deck-list-info` tells whether a deck was
+    there.
+  - A shared listing outlives its deck. After its deck was deleted, the
+    listing stayed in `list-mine` and on `/shared/info/<id>`, and
+    `deck-share-info` for the deleted id answered as for a deck never shared.
   - "Create Deck" prompts for a name with `prompt()` and sends
     `POST /svc/decks/create-deck` with `{ string name = 1; }`.
   - The default deck can't be shared: the page says to move its cards into a
     new deck first.
 
-`/shared/mine` ("My Shared Items") calls `POST /svc/shared/list-mine` (empty
-request). It returns `items` 1 (repeated `{ id, title, thumbs_up, thumbs_down,
-mtime, downloads = 6 }`), `reviews` 2 and `expired_decks` 3; the body is empty
-when nothing is shared. The bundle removes a shared item with
-`POST /svc/shared/remove-item` and `{ uint32 shared_id = 1; }`. That page's
-controls for it have not been seen, because the test account had nothing
-shared.
+### Shared items
+
+`/shared/mine` (heading "Your Shared Items") calls `POST /svc/shared/list-mine`
+with an empty request.
+
+```
+ListMineResponse {
+  repeated Item items = 1;
+  // 2 reviews, 3 expired_decks: never seen set
+}
+Item {
+  uint32 id = 1;            // shared id, as in /shared/info/<id>
+  string title = 2;
+  uint32 thumbs_up = 3;
+  uint32 thumbs_down = 4;
+  int64  mtime = 5;         // midnight UTC of the day it was last shared
+  uint32 downloads = 6;
+}
+```
+
+- **Empty is empty.** With nothing shared the body is zero bytes, and the page
+  says "You have not shared anything yet."
+- **Hidden listings show.** A listing appears here as soon as its share
+  succeeds, during the 24 hours it is hidden from the public.
+- **No deck id.** An item names its listing only. The deck it came from is
+  `deck-share-info`'s `shared_id`, read per deck.
+- **Order:** the newest share came first.
+- **The page** is a table (Title, Thumbs Up, Modified, Downloads, Anki) with an
+  "Info" link per row to `/shared/info/<id>`, and no other control.
+
+Removing one happens from its listing page, which shows its owner a "Remove"
+button. It asks "Really delete this item?" in a native `confirm()` dialog and
+says nothing else, then sends `POST /svc/shared/remove-item` with
+`{ uint32 shared_id = 1; }`.
+
+- The answer is `200` with an empty body, and the item leaves `list-mine` at
+  once.
+- `item-info` for a removed listing answers `missing`, the same body as an id
+  that never existed, to its owner and anonymously alike.
+- Removing the same id again gets the same `200` and empty body.
 
 ### Share flow
 
@@ -295,6 +335,9 @@ int64 deck_id = 5; optional uint32 shared_id = 6; }`. The form is pre-filled
    A share of a one-card deck reached `SUCCESS` about 15 s after the submit. The
    state kept answering `SUCCESS` with that `shared_id` afterwards.
 
+   An empty deck shares too: one with no notes reached `SUCCESS` in about 15 s,
+   as a 58 KB listing with "Sample (from 0 notes)".
+
 5. **After the share.**
    - **Hidden for a day.** The listing page tells its owner: "It will take 24
      hours for this deck to become visible to the public, so that copyright
@@ -306,5 +349,8 @@ int64 deck_id = 5; optional uint32 shared_id = 6; }`. The form is pre-filled
      collection is still the same, and then share it again." `deck-share-info`
      for that deck then carries the listing's `shared_id`, its metadata as
      shared, and `share_count` 1.
+   - **`share_count` is the account's.** It counts every share in the last
+     seven days, whichever deck: a second deck's `deck-share-info` read 1
+     before its own share and 2 after.
    - **Tags are padded.** AnkiWeb stores `test` as `" test "`, in both
      `deck-share-info` and `item-info`.
