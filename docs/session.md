@@ -221,7 +221,8 @@ Calls that use the browser take turns: each waits for the one before it,
 whether that one succeeded or failed. A session check, a cookie import and a
 share never interleave on the one cookie jar. A share that waits on AnkiWeb
 holds its turn for up to two minutes, and calls behind it wait too. Calls that
-need no browser, such as searches and anonymous downloads, do not queue. The session never opens a
+need no browser do not queue: searches, and downloads that get by without a
+cookie or with the stored one. The session never opens a
 headed window, since an MCP client over stdio may have no display. The first time a
 tool needs a signed-in session and there is none, the server runs the browser
 import above with `auto`, once per process. If that fails too, the tool gets an

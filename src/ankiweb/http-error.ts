@@ -43,10 +43,13 @@ function message(status: number, reason: string, url: string | undefined): strin
 export class AnkiWebHttpError extends ToolError {
   override name = "AnkiWebHttpError";
   readonly status: number;
+  /** Whether this is the signed-in daily download cap, which no other cookie or wait lifts today. */
+  readonly dailyLimit: boolean;
 
   /** `url` is the request's, which decides how a `429` is worded. */
   constructor(status: number, reason: string, url?: string) {
     super(message(status, reason, url));
     this.status = status;
+    this.dailyLimit = status === HTTP_TOO_MANY_REQUESTS && DAILY_LIMIT.test(reason);
   }
 }

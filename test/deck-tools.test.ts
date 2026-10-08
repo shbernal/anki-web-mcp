@@ -6,7 +6,14 @@ import type { Client } from "@modelcontextprotocol/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { SharedDecks } from "../src/ankiweb/shared.js";
-import { type DataDir, resolveDataDir } from "../src/data-dir.js";
+import { writeStoredSession } from "../src/browser/cookies.js";
+import {
+  accountPaths,
+  type DataDir,
+  DEFAULT_ACCOUNT,
+  ensureAccount,
+  resolveDataDir,
+} from "../src/data-dir.js";
 import { connectedClient, textOf } from "./connect.js";
 import { fakeFetch, fixtureResponse } from "./fake-fetch.js";
 
@@ -22,6 +29,8 @@ const SESSION_COOKIE = {
   secure: true,
   sameSite: "Lax",
 } as const;
+const LOG_IN = "Please log in to download more decks.";
+const DAILY_LIMIT = "Daily limit exceeded; please try again tomorrow.";
 const DOWNLOAD = { name: "download_shared_deck", arguments: { deck: "2183294427" } };
 
 let scratch: string;
@@ -33,17 +42,33 @@ function deck(): Response {
   });
 }
 
-/** Serves the recorded listing, and the deck to whoever `allowed` lets through. */
-function catalogue(allowed: (cookie: string | undefined) => boolean): SharedDecks {
+/**
+ * Serves the recorded listing, and the deck to whoever `allowed` lets through.
+ * Anyone else is asked to log in, or told `signedInRefusal` if they sent a cookie.
+ */
+function catalogue(
+  allowed: (cookie: string | undefined) => boolean,
+  signedInRefusal = LOG_IN,
+): SharedDecks {
   const fake = fakeFetch(async (url, cookie) => {
     if (url.includes("item-info")) {
       return fixtureResponse("item-info-2183294427.bin");
     }
     return allowed(cookie)
       ? deck()
-      : new Response("Please log in to download more decks.", { status: 429 });
+      : new Response(cookie === undefined ? LOG_IN : signedInRefusal, { status: 429 });
   });
   return new SharedDecks({ fetch: fake.fetch });
+}
+
+/** Leaves the default account's `cookies.json` holding `ankiweb=<value>`. */
+async function storeCookie(value: string): Promise<void> {
+  const account = accountPaths(dataDir, DEFAULT_ACCOUNT);
+  await ensureAccount(dataDir, account);
+  await writeStoredSession(account.cookies, {
+    validatedAt: new Date().toISOString(),
+    cookies: [{ ...SESSION_COOKIE, value }],
+  });
 }
 
 beforeEach(async () => {
@@ -66,6 +91,7 @@ describe("download_shared_deck", () => {
       filename: FILENAME,
       bytes: APKG.length,
       deck: { id: 2_183_294_427, title: "Japanese Basic Hiragana" },
+      via: "anonymous",
     });
     await expect(readFile(path)).resolves.toStrictEqual(Buffer.from(APKG));
     await client.close();
@@ -83,7 +109,7 @@ describe("download_shared_deck", () => {
   });
 
   it("retries with the session once AnkiWeb asks for a login", async () => {
-    expect.assertions(2);
+    expect.assertions(3);
     const client = await connectedClient({
       dataDir,
       sharedDecks: catalogue((cookie) => cookie === "ankiweb=token"),
@@ -92,7 +118,64 @@ describe("download_shared_deck", () => {
     });
     const result = await client.callTool(DOWNLOAD);
     expect(result.isError).not.toBe(true);
-    expect(result.structuredContent).toMatchObject({ filename: FILENAME });
+    expect(result.structuredContent).toMatchObject({ filename: FILENAME, via: "session" });
+    expect(textOf(result.content)).toMatch(/bytes, signed in\)\.$/u);
+    await client.close();
+  });
+
+  it("retries with the stored cookie without launching the browser", async () => {
+    expect.assertions(2);
+    await storeCookie("stored");
+    let launches = 0;
+    const client = await connectedClient({
+      dataDir,
+      sharedDecks: catalogue((cookie) => cookie === "ankiweb=stored"),
+      onLaunch: () => {
+        launches += 1;
+      },
+    });
+    const result = await client.callTool(DOWNLOAD);
+    expect(result.structuredContent).toMatchObject({ filename: FILENAME, via: "session" });
+    expect(launches).toBe(0);
+    await client.close();
+  });
+
+  it("asks the browser for a cookie when AnkiWeb wants a login for the stored one", async () => {
+    expect.assertions(2);
+    await storeCookie("stale");
+    let launches = 0;
+    const client = await connectedClient({
+      dataDir,
+      sharedDecks: catalogue((cookie) => cookie === "ankiweb=token"),
+      loggedIn: true,
+      cookies: [SESSION_COOKIE],
+      onLaunch: () => {
+        launches += 1;
+      },
+    });
+    const result = await client.callTool(DOWNLOAD);
+    expect(result.structuredContent).toMatchObject({ filename: FILENAME, via: "session" });
+    expect(launches).toBe(1);
+    await client.close();
+  });
+
+  it("stops at the daily limit on the stored cookie without launching the browser", async () => {
+    expect.assertions(3);
+    await storeCookie("stored");
+    let launches = 0;
+    const client = await connectedClient({
+      dataDir,
+      sharedDecks: catalogue(() => false, DAILY_LIMIT),
+      loggedIn: true,
+      cookies: [SESSION_COOKIE],
+      onLaunch: () => {
+        launches += 1;
+      },
+    });
+    const result = await client.callTool(DOWNLOAD);
+    expect(result.isError).toBe(true);
+    expect(textOf(result.content)).toMatch(/refused further downloads today/u);
+    expect(launches).toBe(0);
     await client.close();
   });
 

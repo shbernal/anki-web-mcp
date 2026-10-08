@@ -4,21 +4,23 @@
 and `download_shared_deck` saves a deck from it. All three are anonymous `GET`s
 (see [ankiweb.md](ankiweb.md#shared-decks)), so they use Node's `fetch` and
 never start the browser or ask for a session, with one exception: once AnkiWeb
-stops allowing anonymous downloads, a download borrows the session's cookie.
+stops allowing anonymous downloads, a download borrows the session's cookie,
+from `cookies.json` if it can and from the browser if it must.
 
 ## Layout
 
-| module                          | does                                                    |
-| ------------------------------- | ------------------------------------------------------- |
-| `src/ankiweb/urls.ts`           | builds every AnkiWeb URL; no other module knows paths   |
-| `src/ankiweb/ids.ts`            | turns an id or a `/shared/info/<id>` link into an id    |
-| `src/ankiweb/protobuf.ts`       | a schema-less protobuf reader                           |
-| `src/ankiweb/response-cache.ts` | `GET`s with a `max-age` cache, and AnkiWeb's errors     |
-| `src/ankiweb/shared.ts`         | decodes search rows and listings into typed objects     |
-| `src/ankiweb/html.ts`           | turns a description into text                           |
-| `src/tools/shared.ts`           | search and details: schemas, sorting, paging, summaries |
-| `src/save-apkg.ts`              | filenames, the target directory, writing the `.apkg`    |
-| `src/tools/download.ts`         | the download tool, and its retry with the session       |
+| module                          | does                                                      |
+| ------------------------------- | --------------------------------------------------------- |
+| `src/ankiweb/urls.ts`           | builds every AnkiWeb URL; no other module knows paths     |
+| `src/ankiweb/ids.ts`            | turns an id or a `/shared/info/<id>` link into an id      |
+| `src/ankiweb/protobuf.ts`       | a schema-less protobuf reader                             |
+| `src/ankiweb/response-cache.ts` | `GET`s with a `max-age` cache, and AnkiWeb's errors       |
+| `src/ankiweb/shared.ts`         | decodes search rows and listings into typed objects       |
+| `src/ankiweb/html.ts`           | turns a description into text                             |
+| `src/tools/shared.ts`           | search and details: schemas, sorting, paging, summaries   |
+| `src/save-apkg.ts`              | filenames, the target directory, writing the `.apkg`      |
+| `src/tools/download.ts`         | the download tool: schemas, saving, its summary           |
+| `src/tools/start-download.ts`   | anonymous first, then the stored cookie, then the browser |
 
 The protobuf reader decodes a message into its field numbers and leaves typing
 to the caller, so `shared.ts` names each message's field numbers in a table
@@ -66,9 +68,16 @@ down, then by thumbs up. AnkiWeb's own ranking for that sort is not known.
   download key, and the deck is fetched with it. The body is streamed to disk
   rather than held in memory.
 - **Session:** the first attempt carries no cookie. When AnkiWeb answers `429`,
-  the browser session checks it is signed in, importing one if it can, and the
-  download is sent again with its `ankiweb` cookie. With no session the error
-  says why one is needed and how to sign in.
+  the download is sent again with the `ankiweb` cookie the account's
+  `cookies.json` holds, read without the browser or the profile lock. If there
+  is none, or AnkiWeb asks for a login again, the browser session checks it is
+  signed in, importing one if it can, and the download is sent once more with
+  its cookie, since the profile may hold a newer one. A daily limit on the
+  stored cookie is final: the browser's would get the same answer. With no
+  session the error says why one is needed and how to sign in.
+- **`via`:** the output says whether the download went through `anonymous` or
+  with the `session`, and the summary line ends in "signed in" for the latter.
+  A signed-in download counts towards the account's daily cap.
 - **Directory:** the `downloads/` directory from
   [session.md](session.md#data-directory) unless the call names one, which has to
   be an absolute path to an existing directory. That is checked before anything

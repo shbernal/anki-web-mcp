@@ -161,7 +161,7 @@ flowchart LR
 ```
 
 - Shared-deck reads go out without cookies, cached for as long as AnkiWeb allows: ten minutes.
-- After a few anonymous downloads AnkiWeb asks for a login, and the download is retried with your session.
+- After a few anonymous downloads AnkiWeb asks for a login, and the download is retried with your session, from its stored cookie when that is enough.
 - Calls on your account go through one headless browser, one at a time, closed after five idle minutes.
 - Requests are spaced at least a second apart, since AnkiWeb answers `429` after about four searches a minute.
 

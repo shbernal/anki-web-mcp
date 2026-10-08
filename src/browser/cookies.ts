@@ -85,6 +85,12 @@ export async function readStoredSession(path: string): Promise<StoredSession | u
   return text === undefined ? undefined : storedSessionSchema.parse(JSON.parse(text));
 }
 
+/** The `Cookie` header the export at `path` holds, or `undefined` when there is none. */
+export async function storedSessionCookie(path: string): Promise<string | undefined> {
+  const stored = await readStoredSession(path);
+  return stored === undefined ? undefined : sessionCookieHeader(stored.cookies);
+}
+
 /** Writes through a temporary file so a crash never leaves half a session behind. */
 export async function writeStoredSession(path: string, session: StoredSession): Promise<void> {
   const temporary = `${path}.tmp`;

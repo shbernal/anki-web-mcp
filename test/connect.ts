@@ -30,6 +30,8 @@ export interface ClientOptions {
   /** How long `share_deck` waits on AnkiWeb; tests poll without sleeping. */
   readonly sharePoll?: PollOptions;
   readonly readOnly?: boolean;
+  /** Called each time the server launches its browser. */
+  readonly onLaunch?: () => void;
 }
 
 /** A client connected to a server whose browser is a fake. */
@@ -41,12 +43,16 @@ export async function connectedClient({
   respond,
   sharePoll,
   readOnly = false,
+  onLaunch,
 }: ClientOptions): Promise<Client> {
   const fake = fakeContext(cookies, respond);
   const accounts = new Accounts({
     dataDir,
     session: {
-      launch: async () => fake.context,
+      launch: async () => {
+        onLaunch?.();
+        return fake.context;
+      },
       checkLoggedIn: async () => loggedIn,
       fetch: async () => new Response(loggedIn ? LOGGED_IN_BODY : new Uint8Array()),
     },
