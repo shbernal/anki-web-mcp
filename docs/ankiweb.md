@@ -183,15 +183,41 @@ space ends in `_` before the extension. Which characters AnkiWeb drops beyond
   address, the call returns `429` with the body "Please log in to download more
   decks." The same URL and key, sent again with the `ankiweb` session cookie,
   returns the deck. `item-info` kept answering `200` while downloads were
-  refused. How many anonymous downloads are allowed, and for how long, is not
+  refused. On 2026-10-08 an address with no downloads that day was allowed
+  three, 3 s apart, and refused the fourth. How long the refusal lasts is not
   known.
 - **Signing in lifts the anonymous refusal at once.** A signed-in download sent
   one second after an anonymous `429` returned the deck, with no cooldown.
-- **Signed-in downloads have a daily cap.** On 2026-10-06 one session
-  downloaded the same 353 KB deck 16 times, 3 s apart, and the 17th returned
-  `429` with "Daily limit exceeded; please try again tomorrow." Downloads
-  earlier that day may have counted towards it, so 16 is a lower bound. Whether
-  the cap is per account or per address, and when the day resets, is not known.
+- **Signed-in downloads have two daily caps, per account and per address.**
+  Both answer `429` with "Daily limit exceeded; please try again tomorrow.", so
+  the body does not say which one was hit. Observed on 2026-10-08 with the same
+  353 KB deck, 3 s apart, each with a new key, on three IPv4 addresses (ankiweb.net
+  publishes no IPv6 one):
+
+  | address         | account                  | downloaded | then    |
+  | --------------- | ------------------------ | ---------- | ------- |
+  | home            | A, new                   | 16         | refused |
+  | home            | B, new; C, used that day | 0          | refused |
+  | VPN 1           | A                        | 1          | —       |
+  | VPN 1           | B                        | 24         | refused |
+  | VPN 2 (3 anon.) | A                        | 7          | refused |
+  | VPN 2           | B                        | 0          | refused |
+  | VPN 2           | C; the default account   | 1 each     | —       |
+  - **Per account: 24 a day.** A stopped at 24 across three addresses
+    (16 + 1 + 7) and B at 24 on one. On VPN 2 both were refused while C and the
+    default account downloaded from the same address. A refused request does not
+    count: B's refusal at home did not reduce its 24.
+  - **Per address: some number, unknown.** At home, B was refused on its first
+    download and C too, which only an address cap explains. The home address had
+    downloaded before A's 16 that day, anonymously and from C, so its cap is more
+    than 16 by some unknown amount. VPN 1 served 25 signed-in downloads before
+    B met its own cap, so there it is at least 25, though a VPN exit is shared
+    with other users.
+  - **Whether anonymous downloads count towards either cap is not settled.**
+    VPN 2's three anonymous downloads came before A's last 7, and A stopped on
+    its own cap, not the address's.
+  - When the day resets is not known.
+
 - `t` is required. Without it the call returns `400` and "missing field `t`".
 - `download_key` has the shape of a JWT: the header segment decodes to
   `{"op":"sdd","iat":<unix seconds>,"jv":1}`. A key minted a few minutes earlier

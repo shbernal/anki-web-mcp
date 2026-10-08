@@ -14,7 +14,8 @@ const SEARCH_LIMIT =
   "AnkiWeb is rate-limiting searches from this address (HTTP 429). It allows about four a minute, and a block has been seen to last over an hour. Shared-deck details and downloads keep working meanwhile, so a deck id already in hand can still be used.";
 
 /**
- * A signed-in session's daily download cap. Waiting minutes does not lift it,
+ * The daily download caps, 24 signed-in downloads per account and an unknown
+ * number per address, which AnkiWeb words alike. Waiting minutes lifts neither,
  * so it is not worded as a rate limit.
  */
 const DAILY_LIMIT = /daily limit/iu;
@@ -33,7 +34,7 @@ function message(status: number, reason: string, url: string | undefined): strin
   }
   const said = quoted(reason);
   if (DAILY_LIMIT.test(said)) {
-    return `AnkiWeb has refused further downloads today (HTTP 429). It says: "${said}" Retrying before tomorrow will fail the same way.`;
+    return `AnkiWeb has refused further downloads today (HTTP 429). It says: "${said}" Retrying with this account before tomorrow will fail the same way. AnkiWeb words the same refusal for an account's cap, 24 downloads a day, and for a cap on this network address, so another account may or may not get past it.`;
   }
   const reasonSentence = said === "" ? "" : ` It says: "${said}"`;
   return `AnkiWeb is rate-limiting this address (HTTP 429).${reasonSentence} Wait a few minutes before trying again.`;
@@ -43,7 +44,7 @@ function message(status: number, reason: string, url: string | undefined): strin
 export class AnkiWebHttpError extends ToolError {
   override name = "AnkiWebHttpError";
   readonly status: number;
-  /** Whether this is the signed-in daily download cap, which no other cookie or wait lifts today. */
+  /** Whether this is the signed-in daily download cap, which neither this account's other cookies nor waiting lifts today. */
   readonly dailyLimit: boolean;
 
   /** `url` is the request's, which decides how a `429` is worded. */

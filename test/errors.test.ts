@@ -46,7 +46,7 @@ describe("describeError", () => {
         "t",
       ),
     ).toBe(
-      'AnkiWeb has refused further downloads today (HTTP 429). It says: "Daily limit exceeded; please try again tomorrow." Retrying before tomorrow will fail the same way.',
+      'AnkiWeb has refused further downloads today (HTTP 429). It says: "Daily limit exceeded; please try again tomorrow." Retrying with this account before tomorrow will fail the same way. AnkiWeb words the same refusal for an account\'s cap, 24 downloads a day, and for a cap on this network address, so another account may or may not get past it.',
     );
     expect(describeError(new AnkiWebHttpError(429, "", download), "t")).toBe(
       "AnkiWeb is rate-limiting this address (HTTP 429). Wait a few minutes before trying again.",

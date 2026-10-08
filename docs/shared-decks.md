@@ -40,7 +40,9 @@ hour, and that details and downloads keep working meanwhile, so a deck id alread
 in hand is still usable. Any other `429` quotes AnkiWeb's body, which for a
 download is "Please log in to download more decks." A signed-in download refused
 with "Daily limit exceeded; please try again tomorrow." is worded as a daily
-cap instead, since waiting minutes does not lift it.
+cap instead, since waiting minutes does not lift it. It says the limit may be
+the account's, 24 a day, or the address's, since AnkiWeb words both the same,
+so another account on the same connection may or may not get past it.
 
 ## Search
 
@@ -79,11 +81,13 @@ down, then by thumbs up. AnkiWeb's own ranking for that sort is not known.
   is none, or AnkiWeb asks for a login again, the browser session checks it is
   signed in, importing one if it can, and the download is sent once more with
   its cookie, since the profile may hold a newer one. A daily limit on the
-  stored cookie is final: the browser's would get the same answer. With no
+  stored cookie is final: the browser's is the same account's, on the same
+  address, and would get the same answer. With no
   session the error says why one is needed and how to sign in.
 - **`via`:** the output says whether the download went through `anonymous` or
   with the `session`, and the summary line ends in "signed in" for the latter.
-  A signed-in download counts towards the account's daily cap.
+  A signed-in download counts towards the account's daily cap of 24 and the
+  address's.
 - **Directory:** the `downloads/` directory from
   [session.md](session.md#data-directory) unless the call names one, which has to
   be an absolute path to an existing directory. That is checked before anything
