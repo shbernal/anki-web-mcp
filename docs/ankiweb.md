@@ -58,6 +58,15 @@ still refused, and the limit had not cleared after another minute. The response
 carries no `Retry-After` or rate-limit headers. No Cloudflare challenge or bot
 check showed up, in headless Chromium or in `curl`.
 
+The block can last far longer than a minute. On 2026-10-08, two searches and
+three anonymous downloads around 08:47 CEST were followed by a `429` on every
+search, at about 08:51, 08:55, 09:11, 09:38, 09:59 and 10:14: more than 80
+minutes. Shared-deck details and downloads kept working throughout. An anonymous
+search at 11:00 returned `200`, so the block lifted somewhere in the 46 minutes
+after the last refusal. Whether a signed-in search is accepted while anonymous
+ones are refused has not been observed. A successful search response carries
+`cache-control: max-age=600` and, like the refusal, no rate-limit headers.
+
 ## Shared decks
 
 None of these need a session, though downloads stop working without one after
