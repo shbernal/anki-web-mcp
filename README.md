@@ -66,6 +66,12 @@ Add the server to your MCP client's configuration:
 }
 ```
 
+The server answers its client in under half a second. With `@latest`, `npx`
+first asks the npm registry for the newest version, every time the client
+starts it, which can leave the server still connecting after the others have
+loaded. To skip that, run `npm install -g anki-web-mcp` and use
+`"command": "anki-web-mcp"` with no `args`, upgrading by hand.
+
 Then download the Chromium build the server drives:
 
 ```sh
