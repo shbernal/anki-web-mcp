@@ -170,6 +170,13 @@ The Download button fetches this URL, and the browser fires a real `download`
 event for it. The response is the `.apkg` itself (`application/octet-stream`,
 `content-disposition: attachment; filename=<Title_With_Underscores>.apkg`).
 
+The suggested name is the title with spaces turned into `_` and some characters
+dropped, not replaced. On 2026-10-08, "Latex/MathJax commands and symbols" came
+as `LatexMathJax_commands_and_symbols.apkg`, and a title opening with an emoji
+and a space came as `_Multivariable_Calculus.apkg`. A title with a trailing
+space ends in `_` before the extension. Which characters AnkiWeb drops beyond
+`/` and emoji is not known.
+
 - **The first few need no session.** A plain `fetch`/`curl` with no cookies gets
   the same bytes, so a download is two HTTP calls with no page render.
 - **Then AnkiWeb asks for one.** After a few anonymous downloads from one

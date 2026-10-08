@@ -54,20 +54,36 @@ describe("sanitizeFilename", () => {
 
   it("replaces characters a filesystem refuses and trims edge dots", () => {
     expect.assertions(2);
-    expect(sanitizeFilename('a<b>:c"d|e?f*g\u0000h.APKG', "1")).toBe("a_b__c_d_e_f_g_h.apkg");
+    expect(sanitizeFilename('a<b>:c"d|e?f*g\u0000h.APKG', "1")).toBe("a_b_c_d_e_f_g_h.apkg");
     expect(sanitizeFilename("..hidden. ", "1")).toBe("hidden.apkg");
   });
 
+  it("trims underscores from the edges and collapses runs of them", () => {
+    expect.assertions(4);
+    expect(sanitizeFilename("_Multivariable_Calculus.apkg", "1")).toBe(
+      "Multivariable_Calculus.apkg",
+    );
+    expect(sanitizeFilename("Internal_Medicine_Boards_.apkg", "1")).toBe(
+      "Internal_Medicine_Boards.apkg",
+    );
+    expect(sanitizeFilename("LatexMathJax_commands_and_symbols.apkg", "1")).toBe(
+      "LatexMathJax_commands_and_symbols.apkg",
+    );
+    expect(sanitizeFilename("a__b___c.apkg", "1")).toBe("a_b_c.apkg");
+  });
+
   it("falls back when nothing usable is left", () => {
-    expect.assertions(3);
+    expect.assertions(4);
+    expect(sanitizeFilename("___.apkg", "123")).toBe("123.apkg");
     expect(sanitizeFilename("..", "123")).toBe("123.apkg");
     expect(sanitizeFilename(undefined, "123")).toBe("123.apkg");
     expect(sanitizeFilename("", "")).toBe("deck.apkg");
   });
 
   it("renames Windows device names and caps the length", () => {
-    expect.assertions(2);
+    expect.assertions(3);
     expect(sanitizeFilename("CON.apkg", "1")).toBe("_CON.apkg");
+    expect(sanitizeFilename("_con_.apkg", "1")).toBe("_con.apkg");
     expect(sanitizeFilename("x".repeat(300), "1")).toHaveLength(125);
   });
 });

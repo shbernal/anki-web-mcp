@@ -15,7 +15,9 @@ const MAX_COPIES = 1000;
 // oxlint-disable-next-line no-control-regex
 const UNSAFE_CHARACTERS = /[\u0000-\u001F\u007F<>:"/\\|?*]/gu;
 const WINDOWS_RESERVED = /^(?:con|prn|aux|nul|com\d|lpt\d)$/iu;
-const EDGE_DOTS_AND_SPACES = /^[\s.]+|[\s.]+$/gu;
+/** Left at either end of a stem by a title's spaces, or by a character replaced or dropped. */
+const EDGE_FILLER = /^[\s._]+|[\s._]+$/gu;
+const UNDERSCORE_RUN = /_{2,}/gu;
 const HEAD_PREVIEW = 16;
 
 export class DownloadError extends ToolError {
@@ -38,8 +40,9 @@ export function sanitizeFilename(suggested: string | undefined, fallback: string
   const named = extname(base).toLowerCase() === APKG ? base.slice(0, -APKG.length) : base;
   const stem = named
     .replaceAll(UNSAFE_CHARACTERS, "_")
+    .replaceAll(UNDERSCORE_RUN, "_")
     .slice(0, MAX_STEM_LENGTH)
-    .replaceAll(EDGE_DOTS_AND_SPACES, "");
+    .replaceAll(EDGE_FILLER, "");
   if (stem === "") {
     return fallback === "" ? `deck${APKG}` : sanitizeFilename(fallback, "");
   }

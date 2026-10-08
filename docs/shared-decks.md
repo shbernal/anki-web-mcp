@@ -90,8 +90,11 @@ down, then by thumbs up. AnkiWeb's own ranking for that sort is not known.
   is fetched.
 - **Filename:** the one in `content-disposition`, or the deck's title, or its
   id. Any directory part is dropped, characters Windows refuses and control
-  characters become `_`, leading and trailing dots and spaces go, a Windows
-  device name gets a `_` prefix, and the result always ends in `.apkg`.
+  characters become `_`, a run of `_` becomes one, and leading and trailing
+  dots, spaces and `_` go. The last matters because AnkiWeb's own names can
+  start or end in `_` (see [ankiweb.md](ankiweb.md#download)), and Anki treats a
+  leading `_` specially in media names. A Windows device name then gets a `_`
+  prefix, and the result always ends in `.apkg`.
 - **No overwrites:** the file is created exclusively, and a name already taken
   becomes `name (1).apkg`, `name (2).apkg` and so on.
 - **Contents:** the first four bytes must be a zip header (`PK\x03\x04`), or
