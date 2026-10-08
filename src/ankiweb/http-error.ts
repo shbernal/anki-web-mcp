@@ -11,7 +11,7 @@ const MAX_REASON_LENGTH = 200;
  * parse input.", which says nothing, so the body is not quoted for one.
  */
 const SEARCH_LIMIT =
-  "AnkiWeb is rate-limiting this address (HTTP 429). It allows about four searches a minute and can stay limited for a few minutes; wait before trying again.";
+  "AnkiWeb is rate-limiting searches from this address (HTTP 429). It allows about four a minute, and a block has been seen to last over an hour. Shared-deck details and downloads keep working meanwhile, so a deck id already in hand can still be used.";
 
 /**
  * A signed-in session's daily download cap. Waiting minutes does not lift it,

@@ -30,7 +30,7 @@ describe("describeError", () => {
     const search = "https://ankiweb.net/svc/shared/list-decks?search=x";
     const download = "https://ankiweb.net/svc/shared/download-deck/1?t=k";
     expect(describeError(new AnkiWebHttpError(429, "Failed to parse input.", search), "t")).toMatch(
-      /four searches a minute/u,
+      /four a minute, and a block has been seen to last over an hour/u,
     );
     expect(
       describeError(

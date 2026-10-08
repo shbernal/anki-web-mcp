@@ -96,7 +96,7 @@ function registerSearch(server: McpServer, shared: SharedDecks): void {
     {
       title: "Search shared decks",
       description:
-        "Search AnkiWeb's shared deck catalogue by title. AnkiWeb returns every match at once, so the results are sorted and paged here. Needs no AnkiWeb session. AnkiWeb rate-limits searches to about four a minute; repeating a search within ten minutes is served from cache.",
+        "Search AnkiWeb's shared deck catalogue by title. AnkiWeb returns every match at once, so the results are sorted and paged here. Needs no AnkiWeb session. AnkiWeb rate-limits searches to about four a minute, and a refused address can stay refused for over an hour while get_shared_deck and download_shared_deck keep working; repeating a search within ten minutes is served from cache.",
       inputSchema: z.object({
         query: z.string().trim().min(1).describe("Words to look for in deck titles."),
         sort: z
