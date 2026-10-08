@@ -1,0 +1,536 @@
+
+��
+�����"�
+First of all, I want to say thank you to the author of this deck for compiling such a comprehensive list of vocabulary. It is evident that a ton of work was put into it. Kudos to you!
+
+That being said, I'm not even 200 words and have found multiple errors that could hinder people's learning, amongst them:
+
+- non-nouns being capitalized
+- sentences that don't translate correctly
+- stating that possessive pronouns ihr and Ihr are one and the same, and that capitalization doesn't matter (this being done implicitly, of course)
+
+This is in no way, shape, or form a comprehensive list of the errors that I have found, since my focus is on learning the language, not finding ways to dunk on the incredible work done here, but finding these many mistakes before reaching the 1% mark of the total number of notes leads me to believe they will be many more to come and I should keep my eyes peeled.
+
+A way for users to report — and maybe update themselves — instances where these mistakes happen may be beneficial for the community. A shared CSV file of the notes, for example, would be one of the many possible methods. This is of course not a demand, but a suggestion, and since nobody but me is responsible for my learning, I will updating my local version of the deck as needed.
+
+Still choosing to leave a positive review because I believe there's a lot of value in this deck.*�	Thank you very much for taking the time to look through the deck so carefully and for leaving such a detailed comment. I really appreciate the effort and the positive tone of your feedback.You are right that a deck of 20,000 entries can contain mistakes, and I am already working on correcting the issues you mentioned. An updated version will be uploaded, but it will take some time because I want to revise everything systematically and ensure the changes are consistent.Regarding a few of the points you raised:
+
+– Capitalization of non‑nouns: This is indeed an error and will be fixed.
+– Sentence translations: Some sentences are not ideal and will be improved.
+– “ihr” vs. “Ihr”: This seems to be a misunderstanding. In the deck, the possessive pronoun ihr and the formal pronoun Ihr are treated as separate entries. The capitalization is not meant to imply they are the same.
+
+I am considering a way for users to report issues or contribute corrections (for example via a public CSV or GitHub), but I want to stabilize the base version first before opening it up for community edits.Thanks again for your constructive feedback and for leaving a positive review despite the issues. It genuinely helps improve the deck.0����
+�����"�Hey man, thanks a lot for all your hard work! I can imagine how much effort you put in! The results are really cool. There's no need for any other German decks. Regarding the deck, it's very useful, but I'd recommend starting after A2. I think it will be confusing for beginners. 
+�����"�This deck is really good to learn German, it starts off with basic knowledge and gets progressively advanced. 
+I would give it a 10/10 but there's a few definitions of english words mixed when the german words overlap with existing english words e.g. 'man', 'also, 'die'. 
+Otherwise amazing work. I'm very thankful for this,
+�����";Good set of words. Is it possible to add verb conjugations?*�Thanks for your comment! A new update is in progress, and it includes improvements to the template for better usability and customization. Looking forward to sharing it soon!
+
+Update 21/12/25: Thanks for the suggestion!
+
+I agree that verb forms are important in German.
+However, instead of adding full conjugation tables to every verb (which would massively increase review load), I’m considering a separate optional subdeck focused on core irregular and high‑frequency verbs, using key forms and sentence‑based cloze cards.
+
+This keeps the main frequency deck clean while offering targeted conjugation practice for those who want it.0����
+���"useful
+�	�в�"�Fantastic deck. I especially appreciate that spanish translations are included.
+
+I don't see the Filtered Deck that you mention in the deck description. I can create on as per your description, but it would be great to have that already included on importing the deck.*�Hi! Thanks so much for your kind feedback — I’m really glad you’re finding the deck useful, especially the Spanish translations.
+
+Regarding the Filtered Deck: unfortunately, AnkiWeb doesn’t support sharing filtered decks directly within a shared deck. You’ll need to create it manually based on the description I provided. If you run into any issues or have questions, I’m happy to help!
+
+Just a quick note on the translations: translating individual words between German, English, and Spanish can be tricky. Some words don’t have perfect one-to-one equivalents, and meanings can shift depending on context. I’ve tried to keep the translations as accurate and useful as possible, but there may be occasional mismatches. In the future, I’m considering adding a Spanish definition field to help clarify meanings even further.
+Also, I’m currently working on expanding the deck to 20,000 words, so stay tuned for updates!0�¼�
+Ԫ��"Love it!*!20,000 Most Frequent German Words2) German Deutsch TELC B2 Wortschatz Words 8���@����J�b<p>
+    This is an Anki deck contains the 20,000 most frequent German words, organized in manageable chunks with tags and multiple card types to optimize both passive recognition and active production.
+  </p>
+<br>
+<h3>ℹ️ Note about the deck name and card count</h3>
+<p> This deck was originally titled “10,000 Most Frequent German Words,” but it has since been expanded to 20,000 words. Due to AnkiWeb’s constraints, the shared deck title cannot be changed after publication. </p> 
+<p><em>Note:</em> The internal deck name remains <strong>“10.000 häufige Wörter”</strong> for compatibility reasons, even though the content has been expanded to 20,000 words. This ensures smooth updates and continuity with earlier versions.</p>
+<p> What you see in Anki’s Browser (20,000 notes) reflects the current content accurately. The title is historical; the card count and tags represent the updated version. </p> 
+<ul> 
+<li><strong>Summary:</strong> Title = historical; Content = 20,000 words.</li> 
+<li><strong>Versioning:</strong> See the changelog below for update dates and details.</li> </ul>
+<br>
+<h4>💡 Motivation</h4>
+<p><i> A speaker who actively commands around </i><strong>20,000 German words</strong><i> typically understands up to </i><strong>50,000 words passively</strong><i> — the lexical range of a well‑educated native speaker.</i></p>
+<br>
+<h2>🧩Subdeck Overview  </h2>
+<p>This shared deck contains six complementary subdecks: </p>
+<br>
+<ul>
+  <li><strong>Bilder:</strong> Flashcardset with the addon "Google Images" and the field "image_search" for construction of associative notes </li>
+  <li><strong>Hören:</strong> Flashcards to practice the listening</li>
+  <li><strong>Schreiben:</strong> To improve the writing ability</li>
+  <li><strong>Wörter:</strong> 20,000 common german words</li>
+  <li><strong>Übersetzen:</strong> Subdeck for exercise the translation</li>
+ <li><strong>Additional Subdeck, <em>Verschiedene:</em></strong> </li>
+<p>📖  This meta-deck expands the original 20,000-word frequency deck with focused linguistic categories. Each second‑level subdeck targets a specific grammatical or lexical domain to strengthen precision, structure, and expressive accuracy in German. </p>
+<ul>
+  <li><strong>Verben – Konjugation:</strong> Cards dedicated to essential verb forms, including 3rd-person singular, simple past, past participle, and auxiliary selection. Designed for fast, systematic mastery of core conjugation patterns.</li>
+<li><strong>Adverbien:</strong> Adverb cards grouped by functional category (manner, time, degree, etc.) with concise definitions to support natural and accurate usage in both spoken and written German.</li>
+<li><strong>Adjektive:</strong> Adjective cards enriched with synonyms, antonyms, and semantic fields. Helps build strong lexical networks and improves expressive precision.</li>
+<li><strong>Ausrufe (Interjektionen):</strong> Cards focusing on pragmatic function, tone, and typical usage contexts. Emphasizes real-world spoken German rather than literal translation.</li>
+<li><strong>Konjunktionen:</strong> Conjunction cards highlighting logical relationships, required word order (Verbzweit / Verbletzt), and typical sentence patterns. Ideal for mastering complex sentence structure.</li>
+<li><strong>Pronomen:</strong> Pronoun cards designed for paradigm-based learning. Reinforces person, case, and form relationships instead of memorizing isolated items.</li>
+<li><strong>Präpositionen:</strong> Preposition cards emphasizing case government, core spatial/abstract meaning, and example sentences for correct construction.</li>
+</ul>
+
+<br>
+<h4>📚 Additional Lexical Subdecks</h4>
+<br>
+<ul>
+  <li><strong>Namen:</strong> A subdeck containing the proper names that appear in the 20,000-word frequency list. Useful for recognition, pronunciation, and contextual understanding.</li>
+<li><strong>Nomen:</strong> A dedicated subdeck with all nouns from the 20k list, optimized for training grammatical gender (der/die/das) and plural forms.</li>
+<li><strong>Nummern:</strong> A subdeck containing all numbers that appear in the frequency list. Supports quick recognition and production of cardinal and ordinal forms.</li>
+<li><strong>Abkürzungen:</strong> A subdeck for the most common German abbreviations found in the 20k corpus. Helps learners understand real-world texts, signage, and formal writing.</li>
+</ul>
+</ul>
+<br>
+<h2>🔄Learning Method: Two Channels in Parallel</h2>
+  <ul>
+    <li><strong>Main Deck</strong>
+      <ul>
+        <li>Contains all cards (all blocks, all card types).</li>
+        <li>Serves all due reviews automatically, regardless of block.</li>
+        <li>Review it daily to consolidate learned words.</li>
+      </ul>
+    </li>
+    <li><strong>Filtered Deck</strong>
+      <ul>
+        <li>Contains only new cards from the current block (e.g. <code>tag:#1001-2000 is:new</code>).</li>
+        <li>Use it exclusively to unlock new words.</li>
+        <li>When you finish a block, switch the filter to the next block.</li>
+      </ul>
+    </li>
+  </ul>
+<br>
+  <h2>🏷️Tag Structure</h2>
+  <ul>
+    <li><strong>Block Tags:</strong> <code>#0001-1000</code> — Split the 1,000 cards into one block of 1,000 words. Future blocks can follow the same pattern (e.g. <code>#1001-2000</code>).</li>
+    <li><strong>Card-Type Tags:</strong>
+      <ul>
+        <li>— German → Native for passive learning</li>
+        <li>— Native → German for active recall</li>
+        <li>— Cloze deletions for context, grammar &amp; collocations</li>
+        <li>— Audio → Text to sharpen listening comprehension &amp; spelling</li>
+      </ul>
+    </li>
+  </ul>
+<br>
+<br>
+<a href="https://postimages.org/" rel="noopener noreferrer"><img src="https://i.postimg.cc/4dtR1WzJ/10k-deutsch.png" alt="10k-deutsch"></a>
+ <br><br> 
+<h3>📚How It Works in Practice</h3>
+  <ul>
+    <li><strong>Reviews:</strong> First open the Main Deck and complete your due reviews — this keeps words from <code>#0001-1000</code> in rotation.</li>
+    <li><strong>New Cards:</strong> Then study the Filtered Deck to learn only the new words from the current block.</li>
+    <li><strong>Block Switch:</strong> Once block <code>#1001-2000</code> is mastered, change the filter to <code>#2001-3000 is:new</code>. Previous block reviews continue in the Main Deck.</li>
+  </ul>
+<p><strong>Note:</strong> Filtered Decks are only a “window” into your collection — everything outside the filter remains and is reviewed in the Main Deck.</p>
+<br>
+<h3>🖥️ Desktop Preview (also optimized for mobile)</h3>
+<a href="https://postimages.org/" rel="noopener noreferrer"><img src="https://i.postimg.cc/MKbbS4mc/du-10K.png" alt="du-10K" width="600"></a>
+<br>
+<br>
+<h2>🎯Vocabulary Coverage &amp; the Pareto Principle</h2>
+<br>
+<pre>Words     | Spoken Coverage | Written Coverage | CEFR Level
+-----------------------------------------------------------
+100       | 53%              | 49%              | A1
+1,000     | 85%              | 74%              | A2
+2,500     | 92%              | 82%              | B1
+5,000     | 95%              | 89%              | B2
+7,500     | 97%              | 93%              | C1
+10,000    | 98%              | 95%              | C2
+15,000    | 99%              | 97%              | C2+  (near-native)
+20,000    | 99,5%            | 98%              | C2++  (native-like academic vocabulary) 
+</pre>
+<p>
+    These figures align with Pareto’s law (the 80/20 rule): roughly 20% of the most used words yield around 80% of language coverage. By focusing on the top 5% (5,000 words), you reach about 95% fluency—just 1.4% of the 350,000+ entries in the authoritative Collins German Unabridged dictionary.
+  </p>
+<h2>Vocabulary Needed for Varying Fluency Levels</h2>
+  <ul>
+    <li><strong>250 words:</strong> Core essentials—without them, meaningful sentences are impossible.</li>
+    <li><strong>750 words:</strong> Everyday spoken vocabulary used by every speaker.</li>
+    <li><strong>2,500 words:</strong> Express almost anything, though with some creativity needed.</li>
+    <li><strong>5,000 words:</strong> Active vocabulary of native speakers without higher education.</li>
+    <li><strong>10,000 words:</strong> Active vocabulary of educated native speakers.</li>
+    <li><strong>20,000 words:</strong> Passive vocabulary for reading and enjoying literature.</li>
+  </ul>
+<br>
+  <h2>📝TELC B2 Vocabulary Requirements</h2>
+  <p>
+    For the TELC B2 exam, a working vocabulary of around <strong>4,000–5,000 words</strong> is recommended. This range ensures you can comprehend complex texts, follow detailed arguments, and express ideas fluently and accurately.
+  </p>
+  <p>
+    <strong>Why this deck helps:</strong> By mastering the first 1,000 most frequent words and then progressively adding new blocks, you build a solid core on which to layer B2-level vocabulary. The parallel use of passive recognition and active recall, contextual cloze practice, and audio reinforcement accelerates your readiness for the TELC B2 exam.
+<br>
+<br>
+<br>
+</p><h2>🧠 Subdeck Übersetzungen: Sentence Cards for Real Language Production</h2>
+<p>This subdeck expands the main deck 20,000 Most Frequent German Words by adding two new card types:</p>
+<ul>
+    <li>--German → Native language (full sentences)</li>
+    <li>--Native language → German (full sentences)</li>
+</ul>
+<br>
+<h4>🔍 Hints</h4>
+<p>This deck also includes sentence cards with two types of hints.</p>
+<ul>
+  <li>The first hint shows the initial letters of each word in the sentence.</li>
+  <li>The second hint removes three or more letters at random from words.</li>
+</ul>
+<p>These features provide a valuable tool for practicing sentence production and active recall.</p>
+<br>
+<h3>🎯 Why this addition makes sense</h3>
+<ul>
+  <li><strong>Active construction instead of passive recognition:</strong> You practice word order, inflections, collocations, and grammar by forming full sentences.</li>
+  <li><strong>Contextual learning:</strong> Vocabulary is embedded in typical syntax and real-world collocations—this improves long-term retention and expressive accuracy.</li>
+  <li><strong>Concept-to-expression transfer:</strong> Translating ideas from your native language into German builds the exact skill needed for real communication.</li>
+</ul>
+<br>
+ <h3>⚠️ What to keep in mind</h3>
+<p>Higher time investment per card Sentence cards often takes 30–120 seconds to review, depending on whether you think, type, or speak your answer.</p><br>
+<ul>
+<li><strong>More reviews</strong> = more cognitive load Limit sentence cards to around 10–25 % of your new cards to avoid burnout. </li>
+</ul><br>
+<p>Translation trap risk for beginners Beginners may default to word-for-word translation—use well-chosen sentences and add notes or feedback to guide proper phrasing.</p><br>
+<h3>👤 Who benefits most?</h3>
+<pre><strong>Language Level </strong>| <strong>Recommendation</strong>
+-----------------------------------------------
+A1–A2          | Use sparingly – short, simple sentences only
+B1             | Highly recommended – production becomes key
+B2+            | Essential – sentence translation &amp; free expression boost fluency
+</pre>
+<br>
+<h3>⚠️ Note: This shared deck may not include all audio or media files due to AnkiWeb limitations.</h3>
+<p>For the complete version of audios, please download it from here:</p>
+<ul>
+  <li>Audio 👉 <a href="https://mega.nz/file/4IQFAYxI#mrN13o77uVCQ5mQwcttbRjVBRZxFtx6_LkoaFv2R5gA" rel="noopener noreferrer">Mega</a></li>
+</ul>
+<h3>How to Use</h3>
+<ol>
+  <li>Download the <code>Audio.zip</code> file from Megaupload.</li>
+  <li>Unzip the file <code>Audio.zip</code>.</li>
+  <li>Import the deck into Anki.</li>
+  <li>Place the audio files into the <code>collection.media</code> folder of Anki.</li>
+</ol>
+<p>
+All audio should then play correctly.
+</p> 
+<h2>💡Updates</h2>
+<strong>2021-07-31</strong> First publication<br>
+<strong>2025-09-02</strong> Correction<br>
+<strong>2025-09-04</strong> Filtered deck photo.<br>
+<strong>2025-09-10</strong> Subdeck Sätze.<br>
+<strong>2025-10-18</strong> New template and dark mode support.<br>
+<strong>2025-11-10</strong> Improved template and definitions in Spanish.<br>
+<strong>2025-11-28</strong> Expanded to 20,000 words.<br>
+<strong>2025-12-07</strong> Subdecks' structure.<br>
+<strong>2025-12-17</strong> Clarified description and deck name explanation.<br>
+<strong>2025-12-26</strong> Subdeck Verschiedene and new audios.<br>R�$��"�
+
+Frequency_number19941
+
+Word
+Hausfrauen
+
+Word_english
+housewives
+
+Word_spanishamas de casa
+	
+Typen
+
+IPAˈhaʊ̯sfʁaʊ̯ən
+F
+	Ex_german9Viele Hausfrauen erledigen täglich enorme Mengen Arbeit.
+L
+
+Ex_english>Many housewives accomplish enormous amounts of work every day.
+T
+
+Ex_spanishFMuchas amas de casa realizan una enorme cantidad de trabajo cada día.
+
+Initial_germanH
+y
+
+Definitionk【Hausfrauen】★★★ 1. noun (plural of “Hausfrau”). Women who manage household duties full time. 
+�
+ES�【Hausfrauen】★★★ 1. sustantivo (plural de “Hausfrau”). Mujeres que se dedican a las tareas del hogar a tiempo completo. 
+V
+Sound_german_wordA [sound:oddcast-3a7c1e57-94f75a97-ef2c21d6-655f4c60-b2862e4c.mp3]
+V
+Sound_german_expB[sound:googletts-418faa5c-48791f20-ed09c195-b9ac4c82-de06f5ae.mp3]
+
+Articledie
+
+Hinw.(v-h-e-t-e-m-a)
+N
+Hinw.2D(vi.L..-ha.s.rau.en-er.e.ige.n-tä.L.ch.-en.r.e.-me.g.n.-ar.e.t..--)
+	
+Comment
+=
+Cloze4Viele [...] erledigen täglich enorme Mengen Arbeit.
+6
+Image-[image:8a9d2df460784bfe830e6d56ebedd692.webp]
+0
+Image_search housewives cooking kitchen photo
+
+
+Infinitive
+
+Present_3sg
+
+Simple_Past
+
+Past_Participle
+
+	Auxiliary
+
+Irregularity
+
+	Separable
+	
+Ex_verb
+
+
+Typ_verb
+
+Verb
+
+Abbr
+	
+Adv_typ
+
+Adv_DE
+	
+Synonym
+	
+Antonym
+
+	Conj_type
+
+
+Word_order
+
+Logic_function
+
+
+Pron_group
+
+Pron_paradigm
+
+
+Pron_focus
+
+Pron_target
+
+	Prep_case
+
+Prep_function
+
+	Prep_rule"�
+
+Frequency_number16677
+
+Wordhingefahren
+
+Word_englishdrove there
+#
+Word_spanishcondujo hasta allí
+
+
+Typevb
+
+IPAˈhɪnɡəˌfaːʁən
+@
+	Ex_german3Ich bin am Wochenende zu meinen Eltern hingefahren.
+:
+
+Ex_english,I went to visit my parents over the weekend.
+:
+
+Ex_spanish,Fui a visitar a mis padres el fin de semana.
+
+Initial_germanH
+]
+
+DefinitionO【hinfahren】★★★ 1. verb. To travel or drive to a specific destination.
+X
+ESR【hinfahren】★★★ 1. verbo. Viajar o conducir hasta un destino específico.
+b
+Sound_german_wordM[sound:hypertts-cf96c156e6a21e92f1e56b58996204f5e4c6731240a6ccfb45d61e65.mp3]
+R
+Sound_german_exp>[sound:azure-2051a926-4dd05c44-6edf2fb2-c2ba6e78-be14cd89.mp3]
+	
+Article
+
+Hinw.(i-b-a-w-z-m-e-h-)
+A
+Hinw.27(ic-bi-am-wo.h.nen.de-zu-me.n.n.-eL.e.n.-hi.g.fah.ren-)
+	
+Comment
+6
+Cloze-Ich bin am Wochenende zu meinen Eltern [...].
+6
+Image-[image:6ea38306147b439fa23219c680a6be27.webp]
+&
+Image_searchcar on road trip photo
+
+
+Infinitivehingefahren
+
+Present_3sg
+fährt hin
+
+Simple_Pastfuhr hin
+
+Past_Participlehingefahren
+
+	Auxiliarysein
+J
+Irregularity:trennbares Verb, starkes Verb, Vokalwechsel ä → u → a
+
+	Separableja
+;
+Ex_verb0Sie fährt jedes Wochenende zu ihren Eltern hin.
+
+Typ_verbunregelmäßiges
+	
+Verb1
+
+Abbr
+	
+Adv_typ
+
+Adv_DE
+	
+Synonym
+	
+Antonym
+
+	Conj_type
+
+
+Word_order
+
+Logic_function
+
+
+Pron_group
+
+Pron_paradigm
+
+
+Pron_focus
+
+Pron_target
+
+	Prep_case
+
+Prep_function
+
+	Prep_rule"�
+
+Frequency_number9295
+
+Word	montieren
+
+Word_englishmount
+
+Word_spanisharmar
+	
+TypeN
+
+IPAmɔntiɾən
+Z
+	Ex_germanMDie Projektionswand ist einfach zu montieren und benötigt keine Verankerung.
+T
+
+Ex_englishFThe projection wall is simple to mount and does not require anchorage.
+U
+
+Ex_spanishGLa pantalla de proyección es fácil de instalar y no requiere anclaje.
+
+Initial_germanM
+�
+
+Definition�【montieren】★1. v. instal, set up for use, put in (i.e. machinery); mount, frame, fix in place, arrange, adjust, fix, repair
+�
+ES�【montieren】★ 1. v. instalar, preparar para su uso, colocar (p. ej., maquinaria); montar, enmarcar, fijar en su lugar, disponer, ajustar, arreglar, reparar
+;
+Sound_german_word&[sound:pronunciation_de_montieren.mp3]
+T
+Sound_german_exp@ [sound:watson-9503a174-8f1e8e9d-86a9da9e-503e3ac3-f11da457.mp3]
+
+Articledas
+
+Hinw.(d-p-i-e-z-m-u-b-k-v)
+Y
+Hinw.2O(di-pr.j.kti.ons-is-ei.f.ch.-zu-mo.t.ere.n-un-be.ö.igt.-ke.n..-ve.a.ker.ung--)
+	
+Comment
+R
+ClozeIDie Projektionswand ist einfach zu [...] und benötigt keine Verankerung.
+6
+Image-[image:9cc741929dca4cf6b208ce4e3229cfa4.webp]
+3
+Image_search#technician installing machine photo
+
+
+Infinitive
+
+Present_3sg
+
+Simple_Past
+
+Past_Participle
+
+	Auxiliary
+
+Irregularity
+
+	Separable
+	
+Ex_verb
+
+
+Typ_verb
+
+Verb
+
+Abbr
+	
+Adv_typ
+
+Adv_DE
+	
+Synonym
+	
+Antonym
+
+	Conj_type
+
+
+Word_order
+
+Logic_function
+
+
+Pron_group
+
+Pron_paradigm
+
+
+Pron_focus
+
+Pron_target
+
+	Prep_case
+
+Prep_function
+
+	Prep_rule*\eyJvcCI6InNkZCIsImlhdCI6MTc5MTQ1MDMyOSwianYiOjF9.XHBregJJc9dLAeqCADNDI_89QdZMH9rKW8VSbVkjnZYbEhttps://github.com/Dazy80/Anki-Decks-Community-Feedback-Contributionsh�

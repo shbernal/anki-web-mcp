@@ -149,6 +149,11 @@ Review {
 - **Sample fields** arrive as text with the HTML already stripped, and media
   rewritten to `[sound:0.mp3]` and `[image:1.jpg]`. Both are served from
   `/shared/mpreview/<id>/<file>` with no session.
+- **Media counts** in `Deck` (`audio = 2`, `images = 3`) can contradict the
+  samples. On 2026-10-08, "20,000 Most Frequent German Words" (9239409, recorded
+  as `item-info-9239409.bin`) had `notes = 20091` and no `audio` or `images`
+  field, so both read 0, while its sample notes named `.mp3` sounds and `.webp`
+  images.
 - **Descriptions** are HTML, in whatever shape the deck was shared with. Recent
   ones are Markdown rendered to `<p>`, `<a>`, `<ul>`, `<strong>` and `<img>`;
   old ones are plain text with newlines.

@@ -2,13 +2,9 @@ import { readFile } from "node:fs/promises";
 
 import { describe, expect, it } from "vitest";
 
+import { dispositionFilename } from "../src/ankiweb/disposition.js";
 import { AnkiWebHttpError } from "../src/ankiweb/http-error.js";
-import {
-  decodeItemInfo,
-  decodeSearch,
-  dispositionFilename,
-  SharedDecks,
-} from "../src/ankiweb/shared.js";
+import { decodeItemInfo, decodeSearch, SharedDecks } from "../src/ankiweb/shared.js";
 import { fakeFetch, fixtureResponse } from "./fake-fetch.js";
 
 async function fixture(name: string): Promise<Buffer> {
@@ -75,6 +71,29 @@ describe("decodeItemInfo", () => {
       name: "Image_URI",
       value: "[image:1.jpg]",
     });
+  });
+
+  it("tells sounds from images by the tag that names them", async () => {
+    expect.assertions(1);
+    const deck = decodeItemInfo(114_060_567, await fixture("item-info-114060567.bin"));
+    expect(deck).toMatchObject({
+      audio: 405,
+      images: 235,
+      samplesCarry: { audio: true, images: true },
+    });
+  });
+
+  it("keeps AnkiWeb's media counts when the samples contradict them", async () => {
+    expect.assertions(2);
+    const deck = decodeItemInfo(9_239_409, await fixture("item-info-9239409.bin"));
+    expect(deck).toMatchObject({
+      audio: 0,
+      images: 0,
+      samplesCarry: { audio: true, images: true },
+    });
+    expect(deck.sampleNotes[0]?.media).toContainEqual(
+      expect.stringMatching(/^https:\/\/ankiweb\.net\/shared\/mpreview\/9239409\/.+\.webp$/u),
+    );
   });
 
   it("throws for an id with no listing", async () => {

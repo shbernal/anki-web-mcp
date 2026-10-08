@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
 import { parseSharedId } from "../ankiweb/ids.js";
-import type { SharedDeckRow, SharedDecks } from "../ankiweb/shared.js";
+import type { SharedDeckDetail, SharedDeckRow, SharedDecks } from "../ankiweb/shared.js";
 import { guarded } from "../errors.js";
 
 const DEFAULT_LIMIT = 20;
@@ -20,6 +20,25 @@ const COMPARE: Readonly<Record<Sort, (left: SharedDeckRow, right: SharedDeckRow)
   title: (left, right) => left.title.localeCompare(right.title),
   modified: (left, right) => right.modified.localeCompare(left.modified),
 };
+
+const COUNTS =
+  "The notes, audio and images counts are AnkiWeb's own, and audio and images have been seen at 0 for a deck whose sample notes carry both.";
+
+/**
+ * A line saying the samples carry media AnkiWeb counts none of, or nothing. The
+ * counts are AnkiWeb's and are left as it sent them.
+ */
+function uncountedMedia({ audio, images, samplesCarry }: Readonly<SharedDeckDetail>): string[] {
+  const missed = [
+    ...(samplesCarry?.audio === true && audio === 0 ? ["audio"] : []),
+    ...(samplesCarry?.images === true && images === 0 ? ["images"] : []),
+  ];
+  return missed.length === 0
+    ? []
+    : [
+        `AnkiWeb counts no ${missed.join(" or ")} for this deck, but its sample notes carry some, so those counts are wrong.`,
+      ];
+}
 
 const row = z.object({
   id: z.number().int(),
@@ -95,8 +114,7 @@ function registerSearch(server: McpServer, shared: SharedDecks): void {
     "search_shared_decks",
     {
       title: "Search shared decks",
-      description:
-        "Search AnkiWeb's shared deck catalogue by title. AnkiWeb returns every match at once, so the results are sorted and paged here. Needs no AnkiWeb session. AnkiWeb rate-limits searches to about four a minute, and a refused address can stay refused for over an hour while get_shared_deck and download_shared_deck keep working; repeating a search within ten minutes is served from cache.",
+      description: `Search AnkiWeb's shared deck catalogue by title. AnkiWeb returns every match at once, so the results are sorted and paged here. Needs no AnkiWeb session. AnkiWeb rate-limits searches to about four a minute, and a refused address can stay refused for over an hour while get_shared_deck and download_shared_deck keep working; repeating a search within ten minutes is served from cache. ${COUNTS}`,
       inputSchema: z.object({
         query: z.string().trim().min(1).describe("Words to look for in deck titles."),
         sort: z
@@ -141,8 +159,7 @@ function registerGet(server: McpServer, shared: SharedDecks): void {
     "get_shared_deck",
     {
       title: "Get a shared deck",
-      description:
-        "Read a shared deck's AnkiWeb listing: description, tags, size, ratings, sample notes with their media, and reviews. Needs no AnkiWeb session.",
+      description: `Read a shared deck's AnkiWeb listing: description, tags, size, ratings, sample notes with their media, and reviews. Needs no AnkiWeb session. ${COUNTS}`,
       inputSchema: z.object({
         deck: z
           .string()
@@ -158,7 +175,8 @@ function registerGet(server: McpServer, shared: SharedDecks): void {
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     guarded("get_shared_deck", async ({ deck, reviews }) => {
-      const { downloadKey, ...full } = await shared.get(parseSharedId(deck));
+      const found = await shared.get(parseSharedId(deck));
+      const { downloadKey, samplesCarry, ...full } = found;
       // AnkiWeb lists reviews newest first.
       const listing = {
         ...full,
@@ -170,7 +188,12 @@ function registerGet(server: McpServer, shared: SharedDecks): void {
         content: [
           {
             type: "text",
-            text: `${listing.title} (${listing.url}${counts}, +${listing.thumbsUp}/-${listing.thumbsDown})\n\n${listing.description}`,
+            text: [
+              `${listing.title} (${listing.url}${counts}, +${listing.thumbsUp}/-${listing.thumbsDown})`,
+              ...uncountedMedia(found),
+              "",
+              listing.description,
+            ].join("\n"),
           },
         ],
         structuredContent: listing,

@@ -1,4 +1,5 @@
 import { ToolError } from "../errors.js";
+import { dispositionFilename } from "./disposition.js";
 import { htmlToText } from "./html.js";
 import { AnkiWebHttpError } from "./http-error.js";
 import {
@@ -25,7 +26,7 @@ import {
 } from "./urls.js";
 
 const MS_PER_SECOND = 1000;
-const SAMPLE_MEDIA = /\[(?:sound|image):(?<file>[^\]]+)\]/gu;
+const SAMPLE_MEDIA = /\[(?<kind>sound|image):(?<file>[^\]]+)\]/gu;
 
 // Field numbers, as `docs/ankiweb.md` lists them for each message.
 const LIST_DECKS = { rows: 1 } as const;
@@ -106,6 +107,8 @@ export interface SharedDeckDetail {
   readonly audio?: number;
   readonly images?: number;
   readonly sampleNotes: readonly SampleNote[];
+  /** Whether any sample note names a sound or an image, by its tag. Decks only. */
+  readonly samplesCarry?: { readonly audio: boolean; readonly images: boolean };
   readonly supportUrl?: string;
   readonly originalDeckName?: string;
   readonly itemsSharedByAuthor: number;
@@ -144,23 +147,29 @@ export function decodeSearch(body: Readonly<Uint8Array>): SharedDeckRow[] {
   return readMessages(decodeMessage(body), LIST_DECKS.rows).map((row) => decodeRow(row));
 }
 
+type MediaKind = "sound" | "image";
+type SampleMedia = readonly [MediaKind, string];
+
 /** AnkiWeb rewrites a sample's media references to `[sound:0.mp3]` and `[image:1.jpg]`. */
-function sampleMedia(id: number, value: string): string[] {
-  const urls: string[] = [];
+function sampleMedia(id: number, value: string): SampleMedia[] {
+  const media: SampleMedia[] = [];
   for (const match of value.matchAll(SAMPLE_MEDIA)) {
-    urls.push(sharedSampleMediaUrl(id, match.groups?.file ?? ""));
+    const kind = match.groups?.kind === "image" ? "image" : "sound";
+    media.push([kind, sharedSampleMediaUrl(id, match.groups?.file ?? "")]);
   }
-  return urls;
+  return media;
 }
 
-function decodeSampleNote(id: number, note: Message): SampleNote {
+/** The note, and what kind of media each of its URLs is. */
+function decodeSampleNote(id: number, note: Message): readonly [SampleNote, readonly MediaKind[]] {
   const fields = readMessages(note, SAMPLE_NOTE.fields).map(
     (field): SampleNote["fields"][number] => ({
       name: readString(field, SAMPLE_FIELD.name) ?? "",
       value: readString(field, SAMPLE_FIELD.value) ?? "",
     }),
   );
-  return { fields, media: fields.flatMap(({ value }) => sampleMedia(id, value)) };
+  const media = fields.flatMap(({ value }) => sampleMedia(id, value));
+  return [{ fields, media: media.map(([, url]) => url) }, media.map(([kind]) => kind)];
 }
 
 function decodeReview(review: Message): SharedDeckReview {
@@ -175,11 +184,14 @@ function decodeReview(review: Message): SharedDeckReview {
 
 function decodeDeck(id: number, deck: Message): Partial<SharedDeckDetail> {
   const downloadKey = nonEmpty(readString(deck, DECK.downloadKey));
+  const samples = readMessages(deck, DECK.sampleNotes).map((note) => decodeSampleNote(id, note));
+  const kinds = new Set(samples.flatMap(([, noteKinds]) => noteKinds));
   return {
     notes: readNumber(deck, DECK.notes) ?? 0,
     audio: readNumber(deck, DECK.audio) ?? 0,
     images: readNumber(deck, DECK.images) ?? 0,
-    sampleNotes: readMessages(deck, DECK.sampleNotes).map((note) => decodeSampleNote(id, note)),
+    sampleNotes: samples.map(([sample]) => sample),
+    samplesCarry: { audio: kinds.has("sound"), images: kinds.has("image") },
     ...(downloadKey === undefined ? {} : { downloadKey }),
   };
 }
@@ -228,23 +240,6 @@ export interface SharedDeckDownload {
   /** The name AnkiWeb suggests in `content-disposition`, unsanitized, if it sent one. */
   readonly suggestedFilename: string | undefined;
   readonly body: ReadableStream<Uint8Array>;
-}
-
-const FILENAME_EXTENDED = /filename\*\s*=\s*(?:UTF-8|utf-8)''(?<name>[^;]+)/u;
-const FILENAME_PLAIN = /filename\s*=\s*(?:"(?<quoted>[^"]*)"|(?<bare>[^;]+))/u;
-
-/** The `filename` of a `content-disposition` header, preferring the RFC 5987 form. */
-export function dispositionFilename(header: string | null): string | undefined {
-  const extended = FILENAME_EXTENDED.exec(header ?? "")?.groups?.name;
-  if (extended !== undefined) {
-    try {
-      return decodeURIComponent(extended.trim());
-    } catch {
-      // A malformed escape falls through to the plain form.
-    }
-  }
-  const plain = FILENAME_PLAIN.exec(header ?? "")?.groups;
-  return (plain?.quoted ?? plain?.bare)?.trim();
 }
 
 /**

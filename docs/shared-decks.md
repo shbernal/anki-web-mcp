@@ -15,6 +15,7 @@ from `cookies.json` if it can and from the browser if it must.
 | `src/ankiweb/ids.ts`            | turns an id or a `/shared/info/<id>` link into an id      |
 | `src/ankiweb/protobuf.ts`       | a schema-less protobuf reader                             |
 | `src/ankiweb/response-cache.ts` | `GET`s with a `max-age` cache, and AnkiWeb's errors       |
+| `src/ankiweb/disposition.ts`    | reads the filename AnkiWeb suggests for a download        |
 | `src/ankiweb/shared.ts`         | decodes search rows and listings into typed objects       |
 | `src/ankiweb/html.ts`           | turns a description into text                             |
 | `src/tools/shared.ts`           | search and details: schemas, sorting, paging, summaries   |
@@ -55,6 +56,11 @@ down, then by thumbs up. AnkiWeb's own ranking for that sort is not known.
 - **Description:** converted to plain text that keeps links and images as
   `[text](href)` and `![alt](src)`, with list items as `- ` lines.
 - **Samples:** each sample note lists its media as URLs.
+- **Media counts:** `notes`, `audio` and `images` are AnkiWeb's, passed on as
+  sent, and both tool descriptions say so. When a sample names a `[sound:…]`
+  and `audio` is 0, or an `[image:…]` and `images` is 0, the text adds a line
+  saying the counts are wrong. The kind comes from the tag, not the file's
+  extension.
 - **Reviews:** the newest ten by default, since a popular deck has hundreds.
   `reviews` asks for more, and `reviewCount` gives the total.
 - **Add-ons:** AnkiWeb lists add-ons under the same ids. A listing without a

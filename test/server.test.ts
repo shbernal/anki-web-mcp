@@ -245,6 +245,33 @@ describe("get_shared_deck", () => {
     await client.close();
   });
 
+  it("says when the samples carry media AnkiWeb counts none of", async () => {
+    expect.assertions(3);
+    const listing = fakeFetch(async () => fixtureResponse("item-info-9239409.bin"));
+    const client = await connectedClient(new SharedDecks({ fetch: listing.fetch }));
+    const result = await client.callTool({
+      name: "get_shared_deck",
+      arguments: { deck: "9239409" },
+    });
+    expect(textOf(result.content)?.split("\n")[1]).toBe(
+      "AnkiWeb counts no audio or images for this deck, but its sample notes carry some, so those counts are wrong.",
+    );
+    expect(result.structuredContent).toMatchObject({ audio: 0, images: 0 });
+    expect(result.structuredContent).not.toHaveProperty("samplesCarry");
+    await client.close();
+  });
+
+  it("adds nothing when the counts agree with the samples", async () => {
+    expect.assertions(1);
+    const client = await connectedClient();
+    const result = await client.callTool({
+      name: "get_shared_deck",
+      arguments: { deck: "2183294427" },
+    });
+    expect(textOf(result.content)?.split("\n")[1]).toBe("");
+    await client.close();
+  });
+
   it("includes as many reviews as asked for", async () => {
     expect.assertions(1);
     const client = await connectedClient();
