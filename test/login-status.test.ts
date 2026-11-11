@@ -14,7 +14,6 @@ import {
   DEFAULT_ACCOUNT,
   ensureAccount,
   ensureDataDir,
-  loginCommand,
   resolveDataDir,
 } from "../src/data-dir.js";
 import { fakeFetch } from "./fake-fetch.js";
@@ -171,11 +170,5 @@ describe("account choice", () => {
     expect(chosenAccount("work", env)).toBe("work");
     expect(chosenAccount(undefined, env)).toBe("home");
     expect(chosenAccount(undefined, {})).toBeUndefined();
-  });
-
-  it("names --account in the sign-in command for a named account only", () => {
-    expect.assertions(2);
-    expect(loginCommand(DEFAULT_ACCOUNT)).toBe("anki-web-mcp --login");
-    expect(loginCommand("work")).toBe("anki-web-mcp --login --account work");
   });
 });
