@@ -349,7 +349,7 @@ says nothing else, then sends `POST /svc/shared/remove-item` with
    `POST /svc/decks/deck-share-info` with `{ int64 deck_id = 1; }`. The response
    is `{ Metadata metadata = 1; bool is_large_user = 2; uint32 share_count = 3; }`,
    where `Metadata` is `{ title = 1; tags = 2; support_url = 3; description = 4;
-int64 deck_id = 5; optional uint32 shared_id = 6; }`. The form is pre-filled
+   int64 deck_id = 5; optional uint32 shared_id = 6; }`. The form is pre-filled
    from it, and `shared_id` is set when the deck was shared before. For a deck
    never shared, the response holds only `metadata.deck_id`.
 2. **Fill it in.** Every field is reachable by its label:

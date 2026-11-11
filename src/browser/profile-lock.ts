@@ -111,10 +111,10 @@ export async function lockProfile(
     await writeFile(lockPath, text, { mode: PRIVATE_FILE_MODE });
   }
   // Shared, so every caller of the release waits on the one removal.
-  let released: Promise<void> | undefined = undefined;
+  const release: { done?: Promise<void> } = {};
   return async () => {
-    released ??= removeIfHeld(lockPath, lock.token);
-    await released;
+    release.done ??= removeIfHeld(lockPath, lock.token);
+    await release.done;
   };
 }
 

@@ -8,11 +8,15 @@ If a change was produced with an AI harness, say so in the issue or pull request
 which harness and which model. That is the whole requirement. It is not a mark
 against the contribution, it is context for reviewing it.
 
+Commit messages carry no AI attribution: no `Co-authored-by:` trailer for a
+tool, no "Generated with" line. CI rejects a commit that has one, so turn your
+harness's commit attribution off. The disclosure goes in the pull request
+description, which a squash merge leaves off `main`.
+
 ## Getting set up
 
 ```sh
 pnpm install
-pnpm exec lefthook install
 pnpm exec playwright install chromium
 ```
 
@@ -32,8 +36,7 @@ pnpm test
 pnpm run build
 ```
 
-`lefthook` runs formatting and linting on staged files before a commit, and lint,
-typecheck and test before a push.
+There are no git hooks: CI runs the gates on every pull request.
 
 ## AnkiWeb changes
 
