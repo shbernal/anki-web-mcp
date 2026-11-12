@@ -1,6 +1,6 @@
 {
   "name": "anki-web-mcp",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "MCP server that searches, downloads and shares AnkiWeb decks from your own session.",
   "keywords": [
     "anki",
