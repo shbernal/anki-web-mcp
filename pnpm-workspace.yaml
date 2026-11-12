@@ -1,4 +1,9 @@
 minimumReleaseAgeStrict: true
+# Own packages, so the cooldown that exists to catch a compromised release from
+# a stranger buys nothing here.
+minimumReleaseAgeExclude:
+  - "@ankimd/*"
+  - "@shbernal/*"
 
 allowBuilds:
   esbuild: true
